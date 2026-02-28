@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOOT</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a; --fg: #f0ede8;
+    --common: #9b9b9b; --uncommon: #4ade80; --rare: #60a5fa;
+    --epic: #c084fc; --legendary: #fbbf24; --mythic: #f97316;
+  }
+  body {
+    background: var(--bg); color: var(--fg); font-family: 'DM Mono', monospace;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; overflow-x: hidden; position: relative;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, #1a1a1a 0%, #0a0a0a 70%); z-index: 0;
+  }
+
+  /* LOGIN SCREEN */
+  #loginScreen {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    background: #0a0a0a;
+  }
+  #loginScreen.hidden { display: none; }
+  .login-box {
+    width: min(380px, 92vw); border: 1px solid #1e1e1e;
+    background: #0d0d0d; padding: 2.5rem 2rem;
+    display: flex; flex-direction: column; gap: 1.25rem; position: relative; z-index: 1;
+  }
+  .login-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem;
+    letter-spacing: 0.2em; text-align: center; color: var(--fg); opacity: 0.9;
+  }
+  .login-subtitle { font-size: 0.55rem; letter-spacing: 0.12em; text-align: center; opacity: 0.3; text-transform: uppercase; }
+  .login-field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .login-label { font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.4; }
+  .login-input {
+    background: #111; border: 1px solid #222; color: var(--fg);
+    font-family: 'DM Mono', monospace; font-size: 0.85rem;
+    padding: 10px 12px; outline: none; width: 100%; transition: border-color 0.2s;
+  }
+  .login-input:focus { border-color: #555; }
+  .login-btn {
+    background: none; border: 1px solid #333; color: var(--fg);
+    font-family: 'DM Mono', monospace; font-size: 0.7rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 11px; cursor: pointer; transition: all 0.2s; margin-top: 0.25rem;
+  }
+  .login-btn:hover { border-color: var(--legendary); color: var(--legendary); }
+  .login-error {
+    font-size: 0.6rem; letter-spacing: 0.08em; color: #f66;
+    text-align: center; opacity: 0; transition: opacity 0.2s; min-height: 1em;
+  }
+  .login-error.show { opacity: 1; }
+  .login-divider { border: none; border-top: 1px solid #1a1a1a; margin: 0.25rem 0; }
+  .login-register-link {
+    font-size: 0.55rem; letter-spacing: 0.08em; text-align: center; opacity: 0.4;
+    cursor: pointer; transition: opacity 0.2s; text-transform: uppercase;
+  }
+  .login-register-link:hover { opacity: 0.8; }
+  #registerPanel { display: none; flex-direction: column; gap: 1rem; }
+  #registerPanel.show { display: flex; }
+  #loginPanel { display: flex; flex-direction: column; gap: 1rem; }
+  #loginPanel.hidden { display: none; }
+
+  /* GAME SCREEN */
+  #gameScreen { display: none; width: 100%; }
+  #gameScreen.show { display: block; }
+
+  .page { position: relative; z-index: 1; text-align: center; width: 100%; padding: 2rem 0 3rem; }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem, 8vw, 7rem);
+    letter-spacing: 0.15em; color: var(--fg); opacity: 0.12; margin-bottom: 1.5rem; user-select: none;
+  }
+
+  /* TOP BAR */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: rgba(10,10,10,0.95); border-bottom: 1px solid #1c1c1c;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem; z-index: 300; backdrop-filter: blur(8px);
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 1rem; }
+  .balance-display { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; letter-spacing: 0.08em; }
+  .balance-label { opacity: 0.35; }
+  .balance-amount {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem;
+    letter-spacing: 0.1em; color: var(--legendary); transition: color 0.3s;
+  }
+  .balance-amount.up   { color: #4ade80; }
+  .balance-amount.down { color: #f66; }
+  .user-badge {
+    font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid #222; padding: 4px 10px; color: #555;
+  }
+  .top-bar-right { display: flex; gap: 0.5rem; align-items: center; }
+  .tb-btn {
+    background: none; border: 1px solid #222; color: #666; font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .tb-btn:hover { border-color: #555; color: var(--fg); }
+  .tb-btn.active-btn { border-color: var(--legendary); color: var(--legendary); }
+  .tb-btn.admin-on   { border-color: #f97316; color: #f97316; }
+  .tb-btn.logout-btn:hover { border-color: #f66; color: #f66; }
+
+  /* VOLUME */
+  .vol-wrap {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid #222; padding: 4px 10px;
+  }
+  .vol-icon { font-size: 0.75rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; user-select: none; }
+  .vol-icon:hover { opacity: 1; }
+  .vol-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 64px; height: 2px; background: #333; outline: none; cursor: pointer; border-radius: 2px;
+  }
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--fg); cursor: pointer;
+  }
+
+  /* ODDS BAR */
+  .odds-bar {
+    display: none; width: min(700px, 95vw); margin: 0 auto 1.25rem;
+    background: #0d0d0d; border: 1px solid #1e1e1e;
+    padding: 0.85rem 1rem; gap: 0.45rem; flex-direction: column; animation: fadeIn 0.2s ease;
+  }
+  .odds-bar.visible { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .odds-row { display: flex; align-items: center; gap: 0.75rem; }
+  .odds-rarity-name { font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; width: 70px; flex-shrink: 0; }
+  .odds-track { flex: 1; height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
+  .odds-fill  { height: 100%; border-radius: 2px; }
+  .odds-pct   { font-size: 0.6rem; opacity: 0.6; width: 40px; text-align: right; flex-shrink: 0; }
+
+  /* SPINNER */
+  .spinner-wrap { display: none; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 2rem; }
+  .spinner-wrap.active { display: flex; }
+  .track-container {
+    width: min(700px, 95vw); position: relative;
+    overflow: hidden; height: 130px; border: 1px solid #222; background: #0f0f0f;
+  }
+  .track-container::before,.track-container::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 120px; z-index: 2; pointer-events: none;
+  }
+  .track-container::before { left: 0; background: linear-gradient(to right, #0a0a0a, transparent); }
+  .track-container::after  { right: 0; background: linear-gradient(to left, #0a0a0a, transparent); }
+  .center-line {
+    position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 2px; background: rgba(255,255,255,0.7); z-index: 3; pointer-events: none;
+  }
+  .center-line::before,.center-line::after {
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+    border-left: 7px solid transparent; border-right: 7px solid transparent;
+  }
+  .center-line::before { top: 0; border-top: 10px solid rgba(255,255,255,0.7); }
+  .center-line::after  { bottom: 0; border-bottom: 10px solid rgba(255,255,255,0.7); }
+  .track { display: flex; align-items: center; height: 100%; will-change: transform; gap: 6px; padding: 0 6px; }
+  .track-item {
+    flex-shrink: 0; width: 110px; height: 110px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.08); background: #141414;
+  }
+  .track-item .item-icon { font-size: 2.8rem; line-height: 1; }
+  .track-item .item-label {
+    font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7;
+    text-align: center; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;
+  }
+  .track-item.rarity-common    { border-color: var(--common);    box-shadow: inset 0 0 20px rgba(155,155,155,0.1); }
+  .track-item.rarity-uncommon  { border-color: var(--uncommon);  box-shadow: inset 0 0 20px rgba(74,222,128,0.1); }
+  .track-item.rarity-rare      { border-color: var(--rare);      box-shadow: inset 0 0 20px rgba(96,165,250,0.1); }
+  .track-item.rarity-epic      { border-color: var(--epic);      box-shadow: inset 0 0 20px rgba(192,132,252,0.1); }
+  .track-item.rarity-legendary { border-color: var(--legendary); box-shadow: inset 0 0 20px rgba(251,191,36,0.1); }
+  .track-item.rarity-mythic    { border-color: var(--mythic);    box-shadow: inset 0 0 20px rgba(249,115,22,0.15); }
+
+  /* BIG RED BUTTON */
+  .spin-btn {
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle at 38% 35%, #ff4444, #cc0000 60%, #880000);
+    border: none; cursor: pointer; position: relative; transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 0 0 6px #1a0000, 0 0 0 8px #440000, 0 20px 60px rgba(200,0,0,0.4), inset 0 2px 8px rgba(255,180,180,0.3);
+  }
+  .spin-btn::after {
+    content: 'OPEN'; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem;
+    letter-spacing: 0.15em; color: rgba(255,255,255,0.9); text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .spin-btn.spinning::after { content: 'SKIP'; font-size: 1.2rem; }
+  .spin-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 6px #1a0000, 0 0 0 8px #440000, 0 30px 80px rgba(220,0,0,0.55), inset 0 2px 8px rgba(255,180,180,0.3);
+  }
+  .spin-btn:active { transform: scale(0.97); }
+  .spin-cost { font-size: 0.55rem; opacity: 0.28; letter-spacing: 0.08em; margin-top: 0.5rem; max-width: 340px; line-height: 1.6; }
+
+  /* PITY BAR */
+  .pity-wrap { width: min(700px, 95vw); margin: 0 auto 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .pity-header { display: flex; justify-content: space-between; align-items: center; }
+  .pity-label  { font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.4; }
+  .pity-count  { font-size: 0.55rem; letter-spacing: 0.08em; opacity: 0.35; }
+  .pity-count .pity-num { font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem; letter-spacing: 0.05em; opacity: 1; }
+  .pity-track { width: 100%; height: 6px; background: #141414; border: 1px solid #1e1e1e; border-radius: 3px; overflow: visible; position: relative; }
+  .pity-fill {
+    height: 100%; border-radius: 3px; background: linear-gradient(to right, #c084fc, #fbbf24);
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1); position: relative;
+  }
+  .pity-fill::after {
+    content: ''; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+    width: 10px; height: 10px; background: #fbbf24; border-radius: 50%;
+    box-shadow: 0 0 8px rgba(251,191,36,0.7); opacity: 0; transition: opacity 0.3s;
+  }
+  .pity-fill.has-progress::after { opacity: 1; }
+  .pity-fill.full { background: linear-gradient(to right, #fbbf24, #f97316); animation: pityPulse 0.8s ease-in-out infinite; }
+  .pity-fill.full::after { background: #f97316; box-shadow: 0 0 12px rgba(249,115,22,0.9); opacity: 1; }
+  @keyframes pityPulse {
+    0%,100% { box-shadow: 0 0 8px rgba(251,191,36,0.4); }
+    50%     { box-shadow: 0 0 20px rgba(251,191,36,0.8), 0 0 40px rgba(249,115,22,0.3); }
+  }
+  .pity-guarantee-label { font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--legendary); opacity: 0; text-align: center; transition: opacity 0.3s; margin-top: 0.1rem; }
+  .pity-guarantee-label.show { opacity: 1; animation: guaranteePulse 1s ease-in-out infinite; }
+  @keyframes guaranteePulse { 0%,100% { color: var(--legendary); } 50% { color: var(--mythic); } }
+
+  /* RESULT */
+  .result { display: none; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 2rem; animation: resultIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both; }
+  .result.show { display: flex; }
+  @keyframes resultIn { from { opacity: 0; transform: scale(0.7) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .result-card {
+    width: 200px; height: 200px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px;
+    border-radius: 8px; border: 2px solid; background: #0f0f0f; position: relative; overflow: hidden;
+  }
+  .result-card::before { content: ''; position: absolute; inset: 0; opacity: 0.07; background: radial-gradient(ellipse at 50% 0%, white, transparent 70%); }
+  .result-card .icon { font-size: 5rem; }
+  .result-card .name { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; padding: 0 10px; }
+  .result-card.rarity-common    { border-color: var(--common);    box-shadow: 0 0 40px rgba(155,155,155,0.2); }
+  .result-card.rarity-uncommon  { border-color: var(--uncommon);  box-shadow: 0 0 40px rgba(74,222,128,0.25); }
+  .result-card.rarity-rare      { border-color: var(--rare);      box-shadow: 0 0 40px rgba(96,165,250,0.3); }
+  .result-card.rarity-epic      { border-color: var(--epic);      box-shadow: 0 0 40px rgba(192,132,252,0.35); }
+  .result-card.rarity-legendary { border-color: var(--legendary); box-shadow: 0 0 60px rgba(251,191,36,0.4); }
+  .result-card.rarity-mythic    { border-color: var(--mythic);    box-shadow: 0 0 80px rgba(249,115,22,0.5); }
+  .rarity-badge { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.15em; }
+  .rarity-common { color: var(--common); } .rarity-uncommon { color: var(--uncommon); }
+  .rarity-rare { color: var(--rare); } .rarity-epic { color: var(--epic); }
+  .rarity-legendary { color: var(--legendary); } .rarity-mythic { color: var(--mythic); }
+  .result-actions { display: flex; gap: 0.75rem; }
+  .action-btn {
+    background: none; border: 1px solid #333; color: var(--fg); font-family: 'DM Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 8px 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;
+  }
+  .action-btn.sell:hover { border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.06); }
+  .action-btn.keep:hover { border-color: #4ade80; color: #4ade80; background: rgba(74,222,128,0.06); }
+  .sell-value { opacity: 0.5; }
+
+  /* DISCOVERY POPUP */
+  .discovery-popup {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+    z-index: 500; text-align: center; pointer-events: none; opacity: 0;
+    transition: opacity 0.3s, transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  .discovery-popup.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+  .discovery-inner {
+    background: #0a0a0a; border: 2px solid; border-radius: 12px;
+    padding: 2rem 2.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; position: relative; overflow: hidden;
+  }
+  .discovery-inner::before { content: ''; position: absolute; inset: 0; opacity: 0.05; background: radial-gradient(ellipse at 50% 0%, white, transparent 65%); }
+  .discovery-label { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.5; }
+  .discovery-icon { font-size: 5rem; line-height: 1; }
+  .discovery-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.1em; }
+  .discovery-rarity { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.6; }
+  .discovery-close {
+    margin-top: 0.5rem; background: none; border: 1px solid #333; color: var(--fg); font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 18px; cursor: pointer; transition: all 0.2s;
+  }
+  .discovery-close:hover { border-color: #666; }
+  .discovery-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 499; }
+  .discovery-overlay.show { display: block; }
+
+  /* INVENTORY PANEL */
+  .inv-panel {
+    position: fixed; top: 0; left: 0; width: min(520px, 100vw); height: 100vh;
+    background: #0d0d0d; border-right: 1px solid #1e1e1e;
+    transform: translateX(-100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;
+  }
+  .inv-panel.open { transform: translateX(0); }
+  .inv-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid #1c1c1c; }
+  .inv-title  { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.15em; }
+  .inv-stats  { font-size: 0.6rem; opacity: 0.35; letter-spacing: 0.08em; margin-top: 2px; }
+  .inv-tabs   { display: flex; border-bottom: 1px solid #1e1e1e; margin-bottom: 0.25rem; }
+  .inv-tab {
+    background: none; border: none; color: #444; font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 6px 14px; cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent;
+  }
+  .inv-tab:hover { color: #888; }
+  .inv-tab.active { color: var(--fg); border-bottom-color: var(--fg); }
+  .inv-filter { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .filter-btn {
+    background: none; border: 1px solid #1e1e1e; color: #555; font-family: 'DM Mono', monospace;
+    font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; cursor: pointer; transition: all 0.15s; border-radius: 2px;
+  }
+  .filter-btn:hover  { color: var(--fg); border-color: #444; }
+  .filter-btn.active { color: var(--fg); border-color: #555; background: #1a1a1a; }
+  .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; }
+  .inv-item {
+    background: #111; border: 1px solid #1e1e1e; border-radius: 4px; padding: 0.6rem;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; transition: border-color 0.15s;
+  }
+  .inv-item:hover { border-color: #333; }
+  .inv-emoji { font-size: 2rem; line-height: 1; }
+  .inv-name  { font-size: 0.5rem; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; opacity: 0.6; word-break: break-word; }
+  .inv-val   { font-size: 0.55rem; opacity: 0.45; }
+  .inv-dot   { width: 5px; height: 5px; border-radius: 50%; position: absolute; top: 5px; right: 5px; }
+  .sell-btn-small {
+    display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.78);
+    border: none; border-radius: 4px; color: #f97316; font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .inv-item:hover .sell-btn-small { display: flex; }
+  .sell-btn-small span { font-size: 0.5rem; opacity: 0.6; }
+  .inv-empty { text-align: center; opacity: 0.2; font-size: 0.7rem; letter-spacing: 0.1em; padding: 3rem 0; }
+  .inv-footer {
+    border-top: 1px solid #1c1c1c; padding-top: 0.75rem; display: none;
+    justify-content: space-between; align-items: center; font-size: 0.65rem; letter-spacing: 0.08em;
+  }
+  .inv-total-label { opacity: 0.35; font-size: 0.55rem; }
+  .inv-total-val   { color: var(--legendary); font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; }
+  .sell-all-btn {
+    background: none; border: 1px solid #2a2a2a; color: #555; font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .sell-all-btn:hover { border-color: #f97316; color: #f97316; }
+
+  /* CODEX */
+  .codex-section { margin-bottom: 1.5rem; }
+  .codex-section-header { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+  .codex-section-progress { font-size: 0.55rem; opacity: 0.3; margin-left: auto; }
+  .codex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.4rem; }
+  .codex-item {
+    background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 4px; padding: 0.6rem;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; transition: border-color 0.2s;
+  }
+  .codex-item.found { border-color: #2a2a2a; }
+  .codex-item.found:hover { border-color: #444; }
+  .codex-emoji { font-size: 1.8rem; line-height: 1; transition: filter 0.3s; }
+  .codex-item:not(.found) .codex-emoji { filter: brightness(0) invert(0.12); }
+  .codex-item:not(.found) { opacity: 0.5; }
+  .codex-name { font-size: 0.45rem; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; opacity: 0.5; }
+  .codex-item:not(.found) .codex-name { opacity: 0; }
+  .codex-item:not(.found)::after {
+    content: '?'; position: absolute; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem; color: #333; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  }
+  .codex-found-dot { width: 4px; height: 4px; border-radius: 50%; position: absolute; top: 4px; right: 4px; }
+
+  /* EDITOR PANEL */
+  .editor-panel {
+    position: fixed; top: 0; right: 0; width: min(430px, 100vw); height: 100vh;
+    background: #0d0d0d; border-left: 1px solid #1e1e1e;
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200; overflow-y: auto; padding: 2rem;
+  }
+  .editor-panel.open { transform: translateX(0); }
+  .editor-panel h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+  .editor-section  { margin-bottom: 2rem; }
+  .editor-section h3 { font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; border-bottom: 1px solid #1e1e1e; padding-bottom: 0.5rem; }
+  .item-editor { display: grid; grid-template-columns: 44px 1fr 62px auto; gap: 0.4rem; margin-bottom: 0.4rem; align-items: center; }
+  .item-editor input { background: #141414; border: 1px solid #222; color: var(--fg); font-family: 'DM Mono', monospace; font-size: 0.7rem; padding: 5px 7px; outline: none; width: 100%; transition: border-color 0.2s; }
+  .item-editor input:focus { border-color: #444; }
+  .item-editor .emoji-input { font-size: 1.1rem; text-align: center; }
+  .item-editor .price-input { font-size: 0.65rem; }
+  .close-panel { background: none; border: none; color: #555; font-size: 1.5rem; cursor: pointer; float: right; line-height: 1; transition: color 0.2s; }
+  .close-panel:hover { color: var(--fg); }
+
+  /* ADMIN PANEL */
+  .admin-panel {
+    position: fixed; top: 0; right: 0; width: min(380px, 100vw); height: 100vh;
+    background: #0a0a0a; border-left: 1px solid #2a1a00;
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200; overflow-y: auto; padding: 2rem;
+  }
+  .admin-panel.open { transform: translateX(0); }
+  .admin-panel h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.15em; margin-bottom: 0.5rem; color: var(--legendary); }
+  .admin-subtitle { font-size: 0.6rem; opacity: 0.35; letter-spacing: 0.08em; margin-bottom: 1.5rem; line-height: 1.6; }
+  .admin-section  { margin-bottom: 2rem; }
+  .admin-section h3 { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; border-bottom: 1px solid #1e1e1e; padding-bottom: 0.5rem; opacity: 0.4; }
+  .odds-editor-row { display: grid; grid-template-columns: 90px 1fr 60px; gap: 0.6rem; align-items: center; margin-bottom: 0.7rem; }
+  .odds-editor-label { font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .odds-editor-row input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 3px; outline: none; cursor: pointer; border-radius: 2px; background: #222; }
+  .odds-editor-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; cursor: pointer; background: var(--legendary); box-shadow: 0 0 6px rgba(251,191,36,0.5); }
+  .odds-num-display { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.05em; text-align: right; color: var(--fg); opacity: 0.7; }
+  .odds-total-row { display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid #1e1e1e; font-size: 0.6rem; letter-spacing: 0.08em; margin-top: 0.5rem; }
+  .odds-total-label { opacity: 0.35; }
+  .odds-total-val { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: #4ade80; }
+  .admin-note { font-size: 0.55rem; opacity: 0.3; letter-spacing: 0.06em; line-height: 1.7; border: 1px solid #1e1e1e; padding: 0.6rem; margin-bottom: 1rem; }
+  .admin-reset-btn { background: none; border: 1px solid #2a2a2a; color: #555; font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 16px; cursor: pointer; transition: all 0.2s; margin-top: 0.5rem; }
+  .admin-reset-btn:hover { border-color: var(--legendary); color: var(--legendary); }
+
+  /* OVERLAY */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150; cursor: pointer; }
+  .overlay.show { display: block; }
+
+  /* PARTICLES */
+  .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .particle  { position: absolute; border-radius: 50%; animation: float linear infinite; opacity: 0; }
+  @keyframes float {
+    0%   { opacity: 0; transform: translateY(100vh) scale(0); }
+    10%  { opacity: 0.6; } 90% { opacity: 0.2; }
+    100% { opacity: 0; transform: translateY(-20px) scale(1.5); }
+  }
+  .mythic-glow { animation: mythicPulse 1s ease-in-out infinite; }
+  @keyframes mythicPulse {
+    0%,100% { box-shadow: 0 0 80px rgba(249,115,22,0.5); }
+    50%     { box-shadow: 0 0 120px rgba(249,115,22,0.8), 0 0 200px rgba(249,115,22,0.3); }
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #111; border: 1px solid #2a2a2a; color: var(--fg); font-size: 0.65rem;
+    letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 22px; z-index: 400;
+    transition: transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275); pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ══ SOCIAL PANEL ══ */
+  .social-panel {
+    position: fixed; top: 0; right: 0; width: min(480px, 100vw); height: 100vh;
+    background: #0d0d0d; border-left: 1px solid #1e1e1e;
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .social-panel.open { transform: translateX(0); }
+  .social-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+  .social-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.15em; }
+  .notif-dot { width: 8px; height: 8px; background: var(--legendary); border-radius: 50%; display: inline-block; animation: notifPulse 1.2s ease-in-out infinite; }
+  @keyframes notifPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(1.4);} }
+  .social-tabs { display: flex; border-bottom: 1px solid #1e1e1e; margin-bottom: 0.5rem; }
+  .social-tab {
+    background: none; border: none; color: #444; font-family: 'DM Mono', monospace;
+    font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 6px 11px; cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent; flex: 1;
+  }
+  .social-tab:hover { color: #888; }
+  .social-tab.active { color: var(--fg); border-bottom-color: var(--fg); }
+  .social-view { display: flex; flex-direction: column; gap: 0.6rem; }
+  .search-row { display: flex; gap: 0.5rem; }
+  .social-input {
+    flex: 1; background: #111; border: 1px solid #222; color: var(--fg);
+    font-family: 'DM Mono', monospace; font-size: 0.8rem; padding: 8px 10px; outline: none; transition: border-color 0.2s;
+  }
+  .social-input:focus { border-color: #555; }
+  .social-action-btn {
+    background: none; border: 1px solid #333; color: var(--fg); font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 14px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .social-action-btn:hover { border-color: var(--legendary); color: var(--legendary); }
+  .social-action-btn.danger:hover { border-color: #f66; color: #f66; }
+  .social-action-btn.accept:hover { border-color: #4ade80; color: #4ade80; }
+  .social-empty { font-size: 0.65rem; opacity: 0.22; text-align: center; padding: 1.5rem 0; letter-spacing: 0.08em; }
+  .social-section-label { font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.35; border-bottom: 1px solid #1a1a1a; padding-bottom: 0.4rem; }
+
+  /* USER CARD */
+  .user-card {
+    background: #111; border: 1px solid #1e1e1e; padding: 0.75rem; display: flex;
+    align-items: center; gap: 0.75rem; transition: border-color 0.2s; cursor: pointer;
+  }
+  .user-card:hover { border-color: #333; }
+  .user-card-avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: #1a1a1a; border: 1px solid #2a2a2a;
+    display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; letter-spacing: 0.05em; color: #555; flex-shrink: 0;
+  }
+  .user-card-info { flex: 1; min-width: 0; }
+  .user-card-name { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .user-card-sub { font-size: 0.55rem; opacity: 0.35; letter-spacing: 0.06em; margin-top: 2px; }
+  .user-card-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+  .mini-btn {
+    background: none; border: 1px solid #2a2a2a; color: #555; font-family: 'DM Mono', monospace;
+    font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 9px; cursor: pointer; transition: all 0.2s;
+  }
+  .mini-btn:hover { border-color: var(--legendary); color: var(--legendary); }
+  .mini-btn.accept:hover { border-color: #4ade80; color: #4ade80; }
+  .mini-btn.danger:hover { border-color: #f66; color: #f66; }
+  .mini-btn.trade-btn:hover { border-color: var(--epic); color: var(--epic); }
+  .friend-status { font-size: 0.5rem; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 2px; }
+  .status-friends { color: #4ade80; border: 1px solid #4ade8033; }
+  .status-pending { color: #fbbf24; border: 1px solid #fbbf2433; }
+
+  /* PROFILE MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 498; }
+  .modal-overlay.show { display: block; }
+  .profile-modal {
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: min(520px,96vw); max-height: 88vh; overflow-y: auto;
+    background: #0d0d0d; border: 1px solid #2a2a2a; z-index: 499; padding: 1.5rem;
+    animation: modalIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275) both;
+  }
+  .profile-modal.show { display: block; }
+  @keyframes modalIn { from{opacity:0;transform:translate(-50%,-50%) scale(0.9);} to{opacity:1;transform:translate(-50%,-50%) scale(1);} }
+  .profile-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  .profile-avatar {
+    width: 56px; height: 56px; border-radius: 50%; background: #1a1a1a; border: 2px solid #2a2a2a;
+    display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem; letter-spacing: 0.05em; flex-shrink: 0;
+  }
+  .profile-username { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.12em; }
+  .profile-stats { font-size: 0.58rem; opacity: 0.35; letter-spacing: 0.08em; margin-top: 3px; line-height: 1.8; }
+  .profile-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e; }
+  .profile-inv-label { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.35; margin-bottom: 0.5rem; }
+  .profile-inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px,1fr)); gap: 0.4rem; }
+  .profile-inv-item {
+    background: #111; border: 1px solid #1e1e1e; border-radius: 4px; padding: 0.5rem;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; position: relative;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .profile-inv-item:hover { border-color: #555; }
+  .profile-inv-item.selected { border-color: var(--epic) !important; background: #1a0a2a; }
+  .profile-inv-emoji { font-size: 1.6rem; line-height: 1; }
+  .profile-inv-name { font-size: 0.45rem; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; opacity: 0.55; }
+  .profile-inv-val  { font-size: 0.5rem; opacity: 0.4; }
+
+  /* TRADE MODAL */
+  .trade-modal {
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: min(750px,98vw); max-height: 92vh; overflow-y: auto;
+    background: #0d0d0d; border: 1px solid #2a2a2a; z-index: 499; padding: 1.5rem;
+    animation: modalIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275) both;
+  }
+  .trade-modal.show { display: block; }
+  .trade-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.15em; margin-bottom: 0.25rem; }
+  .trade-to { font-size: 0.6rem; opacity: 0.4; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+  .trade-cols { display: grid; grid-template-columns: 1fr 28px 1fr; gap: 0; margin-bottom: 1rem; }
+  .trade-col { display: flex; flex-direction: column; gap: 0.5rem; }
+  .trade-col-label { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.4; }
+  .trade-divider { display: flex; align-items: center; justify-content: center; font-size: 1.3rem; opacity: 0.3; padding-top: 1.5rem; }
+  .trade-offer-grid {
+    min-height: 64px; border: 1px dashed #2a2a2a; border-radius: 4px; padding: 0.4rem;
+    display: flex; flex-wrap: wrap; gap: 0.35rem; background: #0f0f0f; align-content: flex-start;
+  }
+  .trade-offer-item {
+    width: 52px; height: 52px; background: #1a1a1a; border-radius: 4px; border: 1px solid #2a2a2a;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 1.4rem; cursor: pointer; position: relative; transition: border-color 0.15s;
+  }
+  .trade-offer-item:hover { border-color: #f66; }
+  .trade-offer-item:hover::after { content: '\00D7'; position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #f66; border-radius: 4px; }
+  .trade-inv-label { font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.3; }
+  .trade-inv-scroll { max-height: 200px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(60px,1fr)); gap: 0.3rem; border: 1px solid #1a1a1a; padding: 0.4rem; border-radius: 4px; background: #0a0a0a; }
+  .trade-inv-mini {
+    background: #111; border: 1px solid #1e1e1e; border-radius: 3px; padding: 0.3rem;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: 1.3rem; cursor: pointer; transition: border-color 0.15s;
+  }
+  .trade-inv-mini:hover { border-color: var(--epic); }
+  .trade-inv-mini.in-offer { border-color: #333; opacity: 0.4; pointer-events: none; }
+  .trade-inv-mini-name { font-size: 0.4rem; opacity: 0.5; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; }
+  .trade-footer { border-top: 1px solid #1e1e1e; padding-top: 0.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+  .trade-value-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.6rem; letter-spacing: 0.06em; flex-wrap: wrap; }
+  .trade-val-label { opacity: 0.35; }
+  .trade-val { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--legendary); }
+  .trade-send-btn {
+    background: none; border: 1px solid var(--epic); color: var(--epic); font-family: 'DM Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 20px; cursor: pointer; transition: all 0.2s;
+  }
+  .trade-send-btn:hover { background: rgba(192,132,252,0.1); }
+
+  /* TRADE NOTIFICATION CARD */
+  .trade-card {
+    background: #111; border: 1px solid #1e1e1e; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .trade-card-header { display: flex; align-items: center; justify-content: space-between; }
+  .trade-card-from { font-size: 0.65rem; letter-spacing: 0.08em; }
+  .trade-card-from span { opacity: 0.4; font-size: 0.55rem; }
+  .trade-card-items { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .trade-card-side { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .trade-card-arrow { font-size: 0.8rem; opacity: 0.3; }
+  .trade-mini-item {
+    width: 36px; height: 36px; background: #1a1a1a; border-radius: 3px; border: 1px solid #2a2a2a;
+    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    title: attr(data-name);
+  }
+  .trade-card-actions { display: flex; gap: 0.4rem; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-title">LOOT</div>
+    <div class="login-subtitle">Sign in to your account</div>
+
+    <div id="loginPanel">
+      <div class="login-field">
+        <div class="login-label">Username</div>
+        <input class="login-input" id="loginUser" type="text" placeholder="username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <div class="login-label">Password</div>
+        <input class="login-input" id="loginPass" type="password" placeholder="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-error" id="loginError">Invalid username or password.</div>
+      <button class="login-btn" onclick="doLogin()">Sign In &rarr;</button>
+      <hr class="login-divider">
+      <div class="login-register-link" onclick="showRegister()">No account? Create one</div>
+    </div>
+
+    <div id="registerPanel">
+      <div class="login-field">
+        <div class="login-label">Choose Username</div>
+        <input class="login-input" id="regUser" type="text" placeholder="username" onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
+      <div class="login-field">
+        <div class="login-label">Choose Password</div>
+        <input class="login-input" id="regPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
+      <div class="login-error" id="regError">Username already taken.</div>
+      <button class="login-btn" onclick="doRegister()">Create Account &rarr;</button>
+      <hr class="login-divider">
+      <div class="login-register-link" onclick="showLogin()">&larr; Back to sign in</div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="gameScreen">
+
+<div class="particles" id="particles"></div>
+<div class="overlay"   id="overlay"   onclick="closeAllPanels()"></div>
+<div class="toast"     id="toast"></div>
+
+<!-- DISCOVERY POPUP -->
+<div class="discovery-overlay" id="discoveryOverlay" onclick="closeDiscovery()"></div>
+<div class="discovery-popup" id="discoveryPopup">
+  <div class="discovery-inner" id="discoveryInner">
+    <div class="discovery-label">&#10022; New Item Discovered</div>
+    <div class="discovery-icon" id="discoveryIcon">&#11088;</div>
+    <div class="discovery-name" id="discoveryName">Item</div>
+    <div class="discovery-rarity" id="discoveryRarity">Common</div>
+    <button class="discovery-close" onclick="closeDiscovery()">Awesome!</button>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="balance-display">
+      <span class="balance-label">BAL</span>
+      <span class="balance-amount" id="balanceDisplay">$1,000.00</span>
+    </div>
+    <div class="user-badge" id="userBadge"></div>
+  </div>
+  <div class="top-bar-right">
+    <div class="vol-wrap">
+      <span class="vol-icon" id="volIcon" onclick="toggleMute()">&#128266;</span>
+      <input type="range" class="vol-slider" id="volSlider" min="0" max="1" step="0.01" value="0.5" oninput="setVolume(this.value)">
+    </div>
+    <button class="tb-btn" id="oddsToggleBtn" onclick="toggleOdds()">Odds Off</button>
+    <button class="tb-btn" onclick="sellAllInventoryQuick()">&#128176; Sell All</button>
+    <button class="tb-btn" onclick="toggleInventory()">&#127890; Inventory <span id="invCount">(0)</span></button>
+    <button class="tb-btn" onclick="toggleEditor()">&#10022; Items</button>
+    <button class="tb-btn" id="socialBtn" onclick="toggleSocial()" style="position:relative">&#128101; Social <span id="topBarNotif" style="display:none;position:absolute;top:3px;right:3px;width:6px;height:6px;background:var(--legendary);border-radius:50%"></span></button>
+    <button class="tb-btn" id="adminBtn" onclick="toggleAdmin()">&#9881; Admin</button>
+    <button class="tb-btn logout-btn" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- INVENTORY PANEL -->
+<div class="inv-panel" id="invPanel">
+  <div class="inv-header">
+    <div>
+      <div class="inv-title">Inventory</div>
+      <div class="inv-stats" id="invStats">0 items</div>
+    </div>
+    <button class="close-panel" onclick="toggleInventory()">&times;</button>
+  </div>
+  <div class="inv-tabs">
+    <button class="inv-tab active" id="tabItems" onclick="switchTab('items')">Items</button>
+    <button class="inv-tab" id="tabCodex" onclick="switchTab('codex')">Codex <span id="codexProgress" style="opacity:0.4"></span></button>
+  </div>
+  <div id="itemsView">
+    <div class="inv-filter">
+      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setFilter('common',this)"    style="color:var(--common)">Common</button>
+      <button class="filter-btn" onclick="setFilter('uncommon',this)"  style="color:var(--uncommon)">Uncommon</button>
+      <button class="filter-btn" onclick="setFilter('rare',this)"      style="color:var(--rare)">Rare</button>
+      <button class="filter-btn" onclick="setFilter('epic',this)"      style="color:var(--epic)">Epic</button>
+      <button class="filter-btn" onclick="setFilter('legendary',this)" style="color:var(--legendary)">Legendary</button>
+      <button class="filter-btn" onclick="setFilter('mythic',this)"    style="color:var(--mythic)">Mythic</button>
+    </div>
+    <div class="inv-grid" id="invGrid"></div>
+    <div id="invEmpty" class="inv-empty">No items yet.<br>Open some crates!</div>
+    <div class="inv-footer" id="invFooter">
+      <div>
+        <div class="inv-total-label">Inventory Value</div>
+        <div class="inv-total-val" id="invTotalVal">$0.00</div>
+      </div>
+      <button class="sell-all-btn" onclick="sellAll()">Sell All</button>
+    </div>
+  </div>
+  <div id="codexView" style="display:none">
+    <div id="codexContent"></div>
+  </div>
+</div>
+
+<!-- EDITOR PANEL -->
+<div class="editor-panel" id="editorPanel">
+  <button class="close-panel" onclick="toggleEditor()">&times;</button>
+  <h2>Item Editor</h2>
+  <div id="rarityEditors"></div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-panel" id="adminPanel">
+  <button class="close-panel" onclick="toggleAdmin()">&times;</button>
+  <h2>&#9881; Admin</h2>
+  <p class="admin-subtitle">Adjust drop rate weights. Actual % shown next to each slider.</p>
+  <div class="admin-note">Changes apply to all future spins immediately.</div>
+  <div class="admin-section">
+    <h3>Drop Rate Weights</h3>
+    <div id="oddsEditors"></div>
+    <div class="odds-total-row">
+      <span class="odds-total-label">Total weight</span>
+      <span class="odds-total-val" id="oddsTotalVal">100</span>
+    </div>
+  </div>
+  <button class="admin-reset-btn" onclick="resetOdds()">&#8634; Reset to Preset Odds</button>
+</div>
+
+<!-- MAIN PAGE -->
+<div class="page" style="margin-top:52px">
+  <h1>LOOT</h1>
+  <div class="odds-bar" id="oddsBar"></div>
+  <div class="spinner-wrap" id="spinnerWrap">
+    <div class="track-container">
+      <div class="center-line"></div>
+      <div class="track" id="track"></div>
+    </div>
+  </div>
+  <div class="result" id="result">
+    <div class="result-card" id="resultCard">
+      <div class="icon" id="resultIcon"></div>
+      <div class="name" id="resultName"></div>
+    </div>
+    <div class="rarity-badge" id="resultRarity"></div>
+    <div class="result-actions">
+      <button class="action-btn sell" onclick="sellItem()">Sell <span class="sell-value" id="sellValue"></span></button>
+      <button class="action-btn keep" onclick="keepItem()">Keep &rarr;</button>
+    </div>
+  </div>
+  <div class="pity-wrap">
+    <div class="pity-header">
+      <span class="pity-label">&#10022; Pity</span>
+      <span class="pity-count"><span class="pity-num" id="pityNum">0</span> / 50 spins</span>
+    </div>
+    <div class="pity-track">
+      <div class="pity-fill" id="pityFill" style="width:0%"></div>
+    </div>
+    <div class="pity-guarantee-label" id="pityGuaranteeLabel">&#9889; GUARANTEED LEGENDARY+ ON NEXT SPIN</div>
+  </div>
+  <button class="spin-btn" id="spinBtn" onclick="spinClick()"></button>
+  <div class="spin-cost">$10.00 per spin &middot; click while spinning to skip &middot; click on result to auto-keep &amp; spin again</div>
+</div>
+
+<!-- ═══ SOCIAL PANEL ═══ -->
+<div class="social-panel" id="socialPanel">
+  <button class="close-panel" onclick="toggleSocial()">&times;</button>
+  <div class="social-header">
+    <h2>Social</h2>
+    <span class="notif-dot" id="socialNotifDot" style="display:none"></span>
+  </div>
+  <div class="social-tabs">
+    <button class="social-tab active" id="stab-search"   onclick="switchSocialTab('search')">Search</button>
+    <button class="social-tab"        id="stab-friends"  onclick="switchSocialTab('friends')">Friends <span id="friendsCount" style="opacity:0.4"></span></button>
+    <button class="social-tab"        id="stab-requests" onclick="switchSocialTab('requests')">Requests <span id="requestsCount" style="opacity:0.4;color:var(--legendary)"></span></button>
+    <button class="social-tab"        id="stab-trades"   onclick="switchSocialTab('trades')">Trades <span id="tradesCount" style="opacity:0.4;color:var(--epic)"></span></button>
+  </div>
+  <!-- SEARCH -->
+  <div id="social-search-view" class="social-view">
+    <div class="search-row">
+      <input type="text" class="social-input" id="userSearchInput" placeholder="Enter exact username..." onkeydown="if(event.key==='Enter')searchUser()">
+      <button class="social-action-btn" onclick="searchUser()">Search</button>
+    </div>
+    <div id="searchResult"></div>
+  </div>
+  <!-- FRIENDS -->
+  <div id="social-friends-view" class="social-view" style="display:none">
+    <div id="friendsList"><div class="social-empty">No friends yet.</div></div>
+  </div>
+  <!-- REQUESTS -->
+  <div id="social-requests-view" class="social-view" style="display:none">
+    <div class="social-section-label">Incoming</div>
+    <div id="incomingRequests"><div class="social-empty">No incoming requests.</div></div>
+    <div class="social-section-label" style="margin-top:1rem">Sent</div>
+    <div id="outgoingRequests"><div class="social-empty">No sent requests.</div></div>
+  </div>
+  <!-- TRADES -->
+  <div id="social-trades-view" class="social-view" style="display:none">
+    <div class="social-section-label">Incoming Trades</div>
+    <div id="incomingTrades"><div class="social-empty">No incoming trades.</div></div>
+    <div class="social-section-label" style="margin-top:1rem">Sent Trades</div>
+    <div id="outgoingTrades"><div class="social-empty">No outgoing trades.</div></div>
+  </div>
+</div>
+
+<!-- ═══ PROFILE MODAL ═══ -->
+<div class="modal-overlay" id="profileOverlay" onclick="closeProfile()"></div>
+<div class="profile-modal" id="profileModal">
+  <button class="close-panel" onclick="closeProfile()" style="float:right">&times;</button>
+  <div class="profile-header">
+    <div class="profile-avatar" id="profileAvatar">?</div>
+    <div class="profile-info">
+      <div class="profile-username" id="profileUsername"></div>
+      <div class="profile-stats" id="profileStats"></div>
+    </div>
+  </div>
+  <div class="profile-actions" id="profileActions"></div>
+  <div class="profile-inv-label">Inventory <span id="profileInvLabel" style="opacity:0.35"></span></div>
+  <div class="profile-inv-grid" id="profileInvGrid"></div>
+</div>
+
+<!-- ═══ TRADE COMPOSE MODAL ═══ -->
+<div class="modal-overlay" id="tradeOverlay" onclick="closeTrade()"></div>
+<div class="trade-modal" id="tradeModal">
+  <button class="close-panel" onclick="closeTrade()" style="float:right">&times;</button>
+  <h2 class="trade-title">Send Trade</h2>
+  <div class="trade-to" id="tradeToLabel"></div>
+  <div class="trade-cols">
+    <div class="trade-col">
+      <div class="trade-col-label">You offer</div>
+      <div class="trade-offer-grid" id="myOfferGrid"></div>
+      <div class="trade-inv-label" style="margin-top:0.5rem">Your inventory &mdash; click to add</div>
+      <div class="trade-inv-scroll" id="tradeMyInv"></div>
+    </div>
+    <div class="trade-divider">&#8644;</div>
+    <div class="trade-col">
+      <div class="trade-col-label">You request</div>
+      <div class="trade-offer-grid" id="theirOfferGrid"></div>
+      <div class="trade-inv-label" style="margin-top:0.5rem">Their inventory &mdash; click to add</div>
+      <div class="trade-inv-scroll" id="tradeTheirInv"></div>
+    </div>
+  </div>
+  <div class="trade-footer">
+    <div class="trade-value-row">
+      <span class="trade-val-label">Your offer:</span><span class="trade-val" id="myOfferValue">$0.00</span>
+      <span class="trade-val-label">Requesting:</span><span class="trade-val" id="theirOfferValue">$0.00</span>
+    </div>
+    <button class="trade-send-btn" onclick="sendTrade()">Send Trade &rarr;</button>
+  </div>
+</div>
+
+</div><!-- /gameScreen -->
+
+<script>
+// ============================================================
+// ALL STATE VARS FIRST (must be before any function calls)
+// ============================================================
+var balance = 1000, inventory = [], invFilter = 'all', oddsVisible = false;
+var currentResult = null, nextId = 0, pityCount = 0, guaranteedLegendary = false;
+var isSpinning = false, spinResolve = null, currentTab = 'items';
+var discoveredItems = new Set();
+var currentUser = null;
+
+// ============================================================
+// ACCOUNT SYSTEM (pure localStorage, no network)
+// ============================================================
+var ACCOUNTS_KEY = 'loot_accounts_v2';
+var SESSION_KEY  = 'loot_session_v2';
+
+function loadAccounts() {
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveAccounts(a) {
+  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a)); } catch(e) {}
+}
+function getSession() { try { return localStorage.getItem(SESSION_KEY) || null; } catch(e) { return null; } }
+function setSession(u) { try { localStorage.setItem(SESSION_KEY, u); } catch(e) {} }
+function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch(e) {} }
+function getUserData(u) { return loadAccounts()[u] || null; }
+function saveUserData(u, data) {
+  var a = loadAccounts();
+  a[u] = Object.assign({}, a[u], data);
+  saveAccounts(a);
+}
+
+// Ensure admin account exists
+function ensureAdmin() {
+  var a = loadAccounts();
+  if (!a['admin']) {
+    a['admin'] = { password:'L00T123', balance:1000, inventory:[], pityCount:0, guaranteedLegendary:false, discoveredItems:[] };
+    saveAccounts(a);
+  }
+}
+
+function showLogin() {
+  document.getElementById('loginPanel').classList.remove('hidden');
+  document.getElementById('registerPanel').classList.remove('show');
+  document.getElementById('loginError').classList.remove('show');
+}
+function showRegister() {
+  document.getElementById('loginPanel').classList.add('hidden');
+  document.getElementById('registerPanel').classList.add('show');
+  document.getElementById('regError').classList.remove('show');
+}
+
+function doLogin() {
+  var u = (document.getElementById('loginUser').value || '').trim().toLowerCase();
+  var p = document.getElementById('loginPass').value || '';
+  var errEl = document.getElementById('loginError');
+  if (!u || !p) { errEl.textContent = 'Please enter username and password.'; errEl.classList.add('show'); return; }
+  var a = loadAccounts();
+  if (!a[u]) { errEl.textContent = 'Account not found.'; errEl.classList.add('show'); return; }
+  if (a[u].password !== p) { errEl.textContent = 'Incorrect password.'; errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+  setSession(u);
+  enterGame(u);
+}
+
+function doRegister() {
+  var u = (document.getElementById('regUser').value || '').trim().toLowerCase();
+  var p = document.getElementById('regPass').value || '';
+  var errEl = document.getElementById('regError');
+  if (!u || u.length < 2) { errEl.textContent = 'Username must be at least 2 characters.'; errEl.classList.add('show'); return; }
+  if (!p || p.length < 4) { errEl.textContent = 'Password must be at least 4 characters.'; errEl.classList.add('show'); return; }
+  var a = loadAccounts();
+  if (a[u]) { errEl.textContent = 'Username already taken.'; errEl.classList.add('show'); return; }
+  a[u] = { password:p, balance:1000, inventory:[], pityCount:0, guaranteedLegendary:false, discoveredItems:[] };
+  saveAccounts(a);
+  errEl.classList.remove('show');
+  setSession(u);
+  enterGame(u);
+}
+
+function doLogout() {
+  persistUserData();
+  clearSession();
+  currentUser = null;
+  document.getElementById('gameScreen').classList.remove('show');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  showLogin();
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+function enterGame(username) {
+  currentUser = username;
+  var data = getUserData(username);
+  if (!data) { showToast('Account error'); return; }
+
+  // Load user data into state
+  balance             = (typeof data.balance === 'number') ? data.balance : 1000;
+  inventory           = (data.inventory || []).map(function(item, i) { return Object.assign({}, item, {_id: i}); });
+  nextId              = inventory.length;
+  pityCount           = data.pityCount || 0;
+  guaranteedLegendary = data.guaranteedLegendary || false;
+  discoveredItems     = new Set(data.discoveredItems || []);
+  currentResult       = null;
+  isSpinning          = false;
+  invFilter           = 'all';
+  oddsVisible         = false;
+  currentTab          = 'items';
+
+  // Update UI
+  document.getElementById('userBadge').textContent = username;
+  var balEl = document.getElementById('balanceDisplay');
+  balEl.textContent = '$' + balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  balEl.className = 'balance-amount';
+  document.getElementById('invCount').textContent = '(' + inventory.length + ')';
+
+  var oddsBar = document.getElementById('oddsBar');
+  if (oddsBar) oddsBar.classList.remove('visible');
+  var oddsBtn = document.getElementById('oddsToggleBtn');
+  if (oddsBtn) { oddsBtn.textContent = 'Odds Off'; oddsBtn.classList.remove('active-btn'); }
+  var resultEl = document.getElementById('result');
+  if (resultEl) resultEl.classList.remove('show');
+  var spinnerEl = document.getElementById('spinnerWrap');
+  if (spinnerEl) spinnerEl.classList.remove('active');
+
+  // Close all panels without crashing
+  ['invPanel','editorPanel','adminPanel'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+  var adminBtn = document.getElementById('adminBtn');
+  if (adminBtn) adminBtn.classList.remove('admin-on');
+  var overlay = document.getElementById('overlay');
+  if (overlay) overlay.classList.remove('show');
+
+  updatePityBar();
+  updateCodexProgress();
+  buildEditor();
+
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.add('show');
+}
+
+function persistUserData() {
+  if (!currentUser) return;
+  saveUserData(currentUser, {
+    balance: balance,
+    inventory: inventory.map(function(item) {
+      var c = Object.assign({}, item);
+      delete c._id;
+      return c;
+    }),
+    pityCount: pityCount,
+    guaranteedLegendary: guaranteedLegendary,
+    discoveredItems: Array.from(discoveredItems)
+  });
+}
+
+setInterval(function() { if (currentUser) persistUserData(); }, 15000);
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden && currentUser) persistUserData();
+});
+
+// ============================================================
+// AUDIO ENGINE
+// ============================================================
+var audioCtx = null, masterGain = null, musicGain = null, sfxGain = null;
+var masterVol = 0.5, muted = false;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain(); masterGain.gain.value = masterVol; masterGain.connect(audioCtx.destination);
+    musicGain = audioCtx.createGain(); musicGain.gain.value = 0.18; musicGain.connect(masterGain);
+    sfxGain = audioCtx.createGain(); sfxGain.gain.value = 1.0; sfxGain.connect(masterGain);
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function setVolume(v) {
+  masterVol = parseFloat(v); muted = masterVol === 0;
+  if (masterGain) masterGain.gain.setTargetAtTime(masterVol, audioCtx.currentTime, 0.05);
+  updateVolIcon();
+}
+function toggleMute() {
+  muted = !muted;
+  if (muted) { if (masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
+  else {
+    if (masterGain) masterGain.gain.setTargetAtTime(masterVol, audioCtx.currentTime, 0.05);
+    if (masterVol === 0) { masterVol = 0.5; document.getElementById('volSlider').value = 0.5; }
+  }
+  updateVolIcon();
+}
+function updateVolIcon() {
+  var v = muted ? 0 : masterVol;
+  var el = document.getElementById('volIcon');
+  if (el) el.textContent = v === 0 ? '\uD83D\uDD07' : v < 0.4 ? '\uD83D\uDD09' : '\uD83D\uDD0A';
+}
+
+function startMusic() {
+  var ctx = getAudioCtx();
+  [73.4,110.0,130.8,146.8,174.6].forEach(function(freq, i) {
+    var osc=ctx.createOscillator(),gain=ctx.createGain(),pan=ctx.createStereoPanner(),lfo=ctx.createOscillator(),lfoG=ctx.createGain();
+    osc.type='sine'; osc.frequency.value=freq+(i%2===0?0.3:-0.3);
+    lfo.type='sine'; lfo.frequency.value=0.07+i*0.03; lfoG.gain.value=0.8;
+    lfo.connect(lfoG); lfoG.connect(osc.frequency); pan.pan.value=(i-2)*0.18; gain.gain.value=0;
+    osc.connect(gain); gain.connect(pan); pan.connect(musicGain); osc.start(); lfo.start();
+    gain.gain.setTargetAtTime(0.06+(i===2?0.04:0), ctx.currentTime+i*0.6, 2.5);
+  });
+  [220.0,261.6,293.7].forEach(function(freq, i) {
+    var osc=ctx.createOscillator(),gain=ctx.createGain(),filt=ctx.createBiquadFilter(),lfo=ctx.createOscillator(),lfoG=ctx.createGain();
+    filt.type='lowpass'; filt.frequency.value=700; osc.type='triangle'; osc.frequency.value=freq;
+    lfo.type='sine'; lfo.frequency.value=0.04+i*0.02; lfoG.gain.value=0.4;
+    lfo.connect(lfoG); lfoG.connect(osc.frequency); gain.gain.value=0;
+    osc.connect(filt); filt.connect(gain); gain.connect(musicGain); osc.start(); lfo.start();
+    gain.gain.setTargetAtTime(0.03, ctx.currentTime+3+i, 4);
+  });
+  scheduleAmbientNotes(ctx);
+}
+
+var AMBIENT_NOTES = [293.7,349.2,392.0,440.0,523.3,587.3,698.5,784.0];
+function scheduleAmbientNotes(ctx) {
+  function next() {
+    setTimeout(function() {
+      if (!audioCtx) return;
+      try {
+        var freq=AMBIENT_NOTES[Math.floor(Math.random()*AMBIENT_NOTES.length)];
+        var osc=ctx.createOscillator(),gain=ctx.createGain(),filt=ctx.createBiquadFilter();
+        filt.type='lowpass'; filt.frequency.value=2500; osc.type='sine'; osc.frequency.value=freq;
+        gain.gain.setValueAtTime(0,ctx.currentTime); gain.gain.linearRampToValueAtTime(0.06,ctx.currentTime+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+2.0);
+        osc.connect(filt); filt.connect(gain); gain.connect(musicGain);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime+2.2);
+      } catch(e) {}
+      next();
+    }, (3.5+Math.random()*6)*1000);
+  }
+  next();
+}
+
+function playTick(speed) {
+  speed = speed || 1.0;
+  try {
+    var ctx=getAudioCtx(),osc=ctx.createOscillator(),gain=ctx.createGain(),filt=ctx.createBiquadFilter();
+    filt.type='lowpass'; filt.frequency.value=1800;
+    osc.connect(filt); filt.connect(gain); gain.connect(sfxGain); osc.type='sine';
+    var freq=Math.min(280+speed*160,600);
+    osc.frequency.setValueAtTime(freq,ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(freq*0.55,ctx.currentTime+0.07);
+    var vol=Math.min(0.04+speed*0.035,0.11);
+    gain.gain.setValueAtTime(vol,ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.09);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.1);
+  } catch(e) {}
+}
+
+var WIN_CHIMES = {
+  common:    [[392,0],[440,0.09]],
+  uncommon:  [[392,0],[523,0.09],[587,0.18]],
+  rare:      [[440,0],[587,0.09],[698,0.18],[784,0.27]],
+  epic:      [[494,0],[659,0.1],[784,0.2],[988,0.3],[784,0.42]],
+  legendary: [[523,0],[659,0.09],[784,0.18],[988,0.27],[1175,0.36],[988,0.48],[1175,0.58]],
+  mythic:    [[440,0],[587,0.08],[784,0.16],[988,0.24],[1175,0.32],[1397,0.4],[1175,0.5],[1397,0.6],[1760,0.72]]
+};
+function playWinSound(rarityId) {
+  try {
+    var ctx=getAudioCtx(),chimes=WIN_CHIMES[rarityId]||WIN_CHIMES.common;
+    chimes.forEach(function(c) {
+      var osc=ctx.createOscillator(),gain=ctx.createGain(),filt=ctx.createBiquadFilter();
+      filt.type='lowpass'; filt.frequency.value=3200;
+      osc.connect(filt); filt.connect(gain); gain.connect(sfxGain); osc.type='sine';
+      var t=ctx.currentTime+c[1];
+      osc.frequency.setValueAtTime(c[0],t);
+      gain.gain.setValueAtTime(0.0001,t); gain.gain.linearRampToValueAtTime(0.14,t+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
+      osc.start(t); osc.stop(t+0.55);
+    });
+  } catch(e) {}
+}
+function playDiscoverySound() {
+  try {
+    var ctx=getAudioCtx();
+    [523,659,784,1047,1319].forEach(function(freq, i) {
+      var osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.type='sine'; osc.frequency.value=freq;
+      gain.gain.setValueAtTime(0.0001,ctx.currentTime+i*0.12);
+      gain.gain.linearRampToValueAtTime(0.12,ctx.currentTime+i*0.12+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+i*0.12+0.45);
+      osc.connect(gain); gain.connect(sfxGain);
+      osc.start(ctx.currentTime+i*0.12); osc.stop(ctx.currentTime+i*0.12+0.5);
+    });
+  } catch(e) {}
+}
+
+// TICK ENGINE
+var ITEM_W=116, tickRaf=null, lastTickX=null, lastTickTime=0;
+function startTickEngine(trackEl, duration) {
+  stopTickEngine();
+  var startTime=performance.now();
+  function frame(now) {
+    if (tickRaf===null) return;
+    var matrix=new DOMMatrix(getComputedStyle(trackEl).transform), currentX=matrix.m41;
+    if (lastTickX!==null) {
+      var dist=Math.abs(currentX-lastTickX);
+      if (dist>=ITEM_W*0.88) { playTick(dist/(now-lastTickTime+0.1)); lastTickX=currentX; lastTickTime=now; }
+    } else { lastTickX=currentX; lastTickTime=now; }
+    if (now-startTime<duration+200) tickRaf=requestAnimationFrame(frame); else stopTickEngine();
+  }
+  tickRaf=requestAnimationFrame(frame);
+}
+function stopTickEngine() { if (tickRaf!==null) { cancelAnimationFrame(tickRaf); tickRaf=null; } lastTickX=null; }
+
+// ============================================================
+// ITEMS DATA
+// ============================================================
+var SPIN_COST=10, PITY_MAX=50;
+var PRESET_ODDS={common:60,uncommon:25,rare:10,epic:4,legendary:0.8,mythic:0.2};
+var RARITIES=[
+  {id:'common',    label:'Common',    color:'#9b9b9b'},
+  {id:'uncommon',  label:'Uncommon',  color:'#4ade80'},
+  {id:'rare',      label:'Rare',      color:'#60a5fa'},
+  {id:'epic',      label:'Epic',      color:'#c084fc'},
+  {id:'legendary', label:'Legendary', color:'#fbbf24'},
+  {id:'mythic',    label:'Mythic',    color:'#f97316'},
+];
+var currentWeights=Object.assign({},PRESET_ODDS);
+var ITEMS={
+  common:[
+    {e:'\uD83D\uDD29',n:'Rusty Bolt',v:1},{e:'\uD83E\uDEA8',n:'Gray Stone',v:1},{e:'\uD83E\uDDF1',n:'Brick',v:1},
+    {e:'\uD83E\uDEB5',n:'Wood Log',v:2},{e:'\uD83C\uDF8B',n:'Bamboo',v:2},{e:'\uD83E\uDEA3',n:'Old Bucket',v:1},
+    {e:'\uD83E\uDDFB',n:'Torn Cloth',v:1},{e:'\uD83C\uDF3E',n:'Wheat Bundle',v:2},{e:'\uD83E\uDD5A',n:'Plain Egg',v:1},
+    {e:'\uD83C\uDF42',n:'Dried Leaf',v:1},{e:'\uD83E\uDDC2',n:'Salt Pouch',v:2},{e:'\uD83E\uDE9D',n:'Bent Hook',v:1},
+    {e:'\uD83D\uDCCC',n:'Copper Pin',v:1},{e:'\uD83E\uDDF5',n:'Thread Spool',v:2},{e:'\uD83E\uDEA8',n:'Flint Chunk',v:2},
+  ],
+  uncommon:[
+    {e:'\uD83C\uDF3F',n:'Herb Bundle',v:8},{e:'\uD83D\uDD2E',n:'Small Orb',v:12},{e:'\u2697\uFE0F',n:'Vial',v:7},
+    {e:'\uD83E\uDDEA',n:'Flask',v:10},{e:'\uD83E\uDEAC',n:'Charm Stone',v:9},{e:'\uD83C\uDF44',n:'Magic Mushroom',v:11},
+    {e:'\uD83E\uDDF2',n:'Iron Magnet',v:8},{e:'\uD83D\uDD11',n:'Brass Key',v:10},{e:'\uD83E\uDEB6',n:'Enchanted Feather',v:9},
+    {e:'\uD83C\uDF30',n:'Spirit Nut',v:7},{e:'\uD83E\uDED9',n:'Sealed Jar',v:10},{e:'\uD83E\uDEA4',n:'Snare Trap',v:8},
+    {e:'\uD83D\uDC8A',n:'Healing Pill',v:11},{e:'\uD83E\uDDEF',n:'Ember Flask',v:9},{e:'\uD83D\uDD2D',n:'Spy Lens',v:12},
+  ],
+  rare:[
+    {e:'\u2694\uFE0F',n:'Iron Sword',v:25},{e:'\uD83D\uDEE1\uFE0F',n:'Round Shield',v:20},{e:'\uD83D\uDDE1\uFE0F',n:'Dagger',v:18},
+    {e:'\uD83C\uDFF9',n:'Hunting Bow',v:22},{e:'\uD83E\uDE83',n:'Boomerang',v:20},{e:'\uD83D\uDDFA\uFE0F',n:'Treasure Map',v:28},
+    {e:'\uD83D\uDD2D',n:'Brass Telescope',v:24},{e:'\uD83D\uDCDC',n:'Arcane Scroll',v:22},{e:'\uD83E\uDD4A',n:'Iron Gauntlet',v:21},
+    {e:'\uD83C\uDFAF',n:'Bullseye Token',v:19},{e:'\u26CF\uFE0F',n:'Mining Pick',v:20},{e:'\uD83E\uDE96',n:'Steel Helmet',v:26},
+    {e:'\uD83D\uDD10',n:'Vault Lock',v:24},{e:'\uD83E\uDDFF',n:'Ward Amulet',v:27},{e:'\uD83E\uDEAC',n:'Runic Talisman',v:23},
+  ],
+  epic:[
+    {e:'\uD83D\uDC8E',n:'Sapphire',v:65},{e:'\uD83D\uDD31',n:'Trident',v:80},{e:'\uD83C\uDF0C',n:'Star Map',v:55},
+    {e:'\uD83E\uDD85',n:'Eagle Crest',v:70},{e:'\uD83C\uDFFA',n:'Ancient Urn',v:60},{e:'\uD83D\uDD2E',n:'Seer Crystal',v:75},
+    {e:'\u26A1',n:'Storm Shard',v:68},{e:'\uD83C\uDF0A',n:'Tidal Core',v:72},{e:'\uD83D\uDD25',n:'Ember Heart',v:65},
+    {e:'\uD83E\uDD8B',n:'Soul Wing',v:58},{e:'\uD83C\uDF19',n:'Moon Fragment',v:70},{e:'\uD83D\uDC3A',n:'Wolf Pelt',v:55},
+    {e:'\uD83D\uDDDD\uFE0F',n:'Master Key',v:80},{e:'\uD83E\uDDFF',n:'Eye of Truth',v:75},{e:'\uD83E\uDEAC',n:'Guardian Rune',v:62},
+  ],
+  legendary:[
+    {e:'\uD83D\uDC51',n:'Ancient Crown',v:200},{e:'\uD83C\uDF1F',n:'Starfall Gem',v:250},
+    {e:'\uD83D\uDC32',n:'Dragon Scale',v:230},{e:'\u269C\uFE0F',n:'Royal Crest',v:220},
+    {e:'\uD83C\uDF20',n:'Shooting Star',v:240},{e:'\uD83C\uDFC6',n:'Eternal Trophy',v:260},
+    {e:'\uD83D\uDCAB',n:'Celestial Shard',v:235},{e:'\uD83D\uDDE1\uFE0F',n:'Void Blade',v:270},
+  ],
+  mythic:[
+    {e:'\uD83D\uDC09',n:'Dragon Heart',v:750},{e:'\uD83C\uDF0C',n:'Void Crystal',v:900},
+    {e:'\u2604\uFE0F',n:'World Ender',v:1000},{e:'\uD83C\uDF00',n:'Time Orb',v:850},
+    {e:'\uD83D\uDC41\uFE0F',n:'All-Seeing Eye',v:950},{e:'\uD83D\uDD31',n:"Poseidon's Trident",v:1100},
+  ],
+};
+
+function itemKey(r,n) { return r+'/'+n; }
+
+// ============================================================
+// BALANCE
+// ============================================================
+function updateBalance(delta) {
+  balance += delta;
+  var el=document.getElementById('balanceDisplay');
+  el.textContent='$'+balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  el.classList.remove('up','down'); void el.offsetWidth;
+  if (delta>0){el.classList.add('up'); setTimeout(function(){el.classList.remove('up');},900);}
+  if (delta<0){el.classList.add('down'); setTimeout(function(){el.classList.remove('down');},900);}
+  persistUserData();
+}
+
+// PITY
+function updatePityBar() {
+  var fill=document.getElementById('pityFill'),num=document.getElementById('pityNum'),label=document.getElementById('pityGuaranteeLabel');
+  if (!fill||!num||!label) return;
+  num.textContent=pityCount;
+  fill.style.width=Math.min(pityCount/PITY_MAX*100,100)+'%';
+  fill.classList.toggle('has-progress',pityCount>0);
+  fill.classList.toggle('full',guaranteedLegendary);
+  label.classList.toggle('show',guaranteedLegendary);
+}
+function incrementPity() { if(pityCount<PITY_MAX)pityCount++; if(pityCount>=PITY_MAX)guaranteedLegendary=true; updatePityBar(); }
+function resetPity() { pityCount=0; guaranteedLegendary=false; updatePityBar(); }
+
+// DISCOVERY
+function checkDiscovery(rarityId,item) {
+  var key=itemKey(rarityId,item.n);
+  if(discoveredItems.has(key))return false;
+  discoveredItems.add(key); persistUserData(); return true;
+}
+function showDiscoveryPopup(rarityId,item) {
+  var rarity=RARITIES.find(function(r){return r.id===rarityId;});
+  var inner=document.getElementById('discoveryInner');
+  inner.style.borderColor=rarity.color; inner.style.boxShadow='0 0 60px '+rarity.color+'44';
+  document.getElementById('discoveryIcon').textContent=item.e;
+  document.getElementById('discoveryName').textContent=item.n;
+  document.getElementById('discoveryRarity').textContent=rarity.label;
+  document.getElementById('discoveryRarity').style.color=rarity.color;
+  document.getElementById('discoveryOverlay').classList.add('show');
+  document.getElementById('discoveryPopup').classList.add('show');
+  playDiscoverySound(); updateCodexProgress();
+}
+function closeDiscovery() {
+  document.getElementById('discoveryOverlay').classList.remove('show');
+  document.getElementById('discoveryPopup').classList.remove('show');
+}
+
+// ODDS
+function renderOdds() {
+  var bar=document.getElementById('oddsBar');
+  var total=RARITIES.reduce(function(s,r){return s+currentWeights[r.id];},0);
+  bar.innerHTML='';
+  RARITIES.forEach(function(r){
+    var pct=currentWeights[r.id]/total*100;
+    var row=document.createElement('div'); row.className='odds-row';
+    row.innerHTML='<span class="odds-rarity-name rarity-'+r.id+'">'+r.label+'</span><div class="odds-track"><div class="odds-fill" style="width:'+Math.max(pct,0.5)+'%;background:'+r.color+'"></div></div><span class="odds-pct">'+(pct<1?pct.toFixed(2):pct.toFixed(1))+'%</span>';
+    bar.appendChild(row);
+  });
+}
+function toggleOdds() {
+  oddsVisible=!oddsVisible;
+  var bar=document.getElementById('oddsBar'),btn=document.getElementById('oddsToggleBtn');
+  if(oddsVisible){renderOdds();bar.classList.add('visible');btn.textContent='Odds On';btn.classList.add('active-btn');}
+  else{bar.classList.remove('visible');btn.textContent='Odds Off';btn.classList.remove('active-btn');}
+}
+
+// ADMIN
+function buildAdminPanel() {
+  var c=document.getElementById('oddsEditors'); c.innerHTML='';
+  RARITIES.forEach(function(r){
+    var total=RARITIES.reduce(function(s,x){return s+currentWeights[x.id];},0);
+    var pct=(currentWeights[r.id]/total*100).toFixed(2);
+    var row=document.createElement('div'); row.className='odds-editor-row';
+    row.innerHTML='<span class="odds-editor-label" style="color:'+r.color+'">'+r.label+'</span><input type="range" min="0.05" max="100" step="0.05" value="'+currentWeights[r.id]+'" oninput="updateOddsWeight(\''+r.id+'\',parseFloat(this.value))" style="accent-color:'+r.color+'"><span class="odds-num-display" id="oddsNum_'+r.id+'">'+pct+'%</span>';
+    c.appendChild(row);
+  });
+  updateOddsTotalDisplay();
+}
+function updateOddsWeight(id,val) {
+  currentWeights[id]=val;
+  var total=RARITIES.reduce(function(s,r){return s+currentWeights[r.id];},0);
+  RARITIES.forEach(function(r){var el=document.getElementById('oddsNum_'+r.id);if(el)el.textContent=(currentWeights[r.id]/total*100).toFixed(2)+'%';});
+  updateOddsTotalDisplay(); if(oddsVisible)renderOdds();
+}
+function updateOddsTotalDisplay() {
+  var total=RARITIES.reduce(function(s,r){return s+currentWeights[r.id];},0);
+  document.getElementById('oddsTotalVal').textContent=total.toFixed(2);
+}
+function resetOdds(){currentWeights=Object.assign({},PRESET_ODDS);buildAdminPanel();if(oddsVisible)renderOdds();showToast('Odds reset to preset');}
+function toggleAdmin(){
+  var panel=document.getElementById('adminPanel'),btn=document.getElementById('adminBtn');
+  ['editorPanel','invPanel'].forEach(function(id){document.getElementById(id).classList.remove('open');});
+  panel.classList.toggle('open'); btn.classList.toggle('admin-on',panel.classList.contains('open'));
+  document.getElementById('overlay').classList.toggle('show',panel.classList.contains('open'));
+  if(panel.classList.contains('open'))buildAdminPanel();
+}
+
+// ITEM EDITOR
+function buildEditor() {
+  var container=document.getElementById('rarityEditors'); if(!container)return; container.innerHTML='';
+  RARITIES.forEach(function(r){
+    var sec=document.createElement('div'); sec.className='editor-section';
+    sec.innerHTML='<h3 style="color:'+r.color+';opacity:1">'+r.label+'</h3>';
+    ITEMS[r.id].forEach(function(item,i){
+      var row=document.createElement('div'); row.className='item-editor';
+      row.innerHTML='<input class="emoji-input" type="text" value="'+item.e+'" oninput="ITEMS[\''+r.id+'\']['+i+'].e=this.value" maxlength="2"><input type="text" value="'+item.n.replace(/"/g,'&quot;')+'" oninput="ITEMS[\''+r.id+'\']['+i+'].n=this.value" placeholder="Item name"><input class="price-input" type="number" value="'+item.v+'" oninput="ITEMS[\''+r.id+'\']['+i+'].v=parseFloat(this.value)||1" placeholder="$" min="0.01" step="0.01"><button onclick="removeItem(\''+r.id+'\','+i+')" style="background:none;border:1px solid #2a2a2a;color:#555;cursor:pointer;padding:4px 8px;font-size:0.8rem" onmouseover="this.style.color=\'#f66\';this.style.borderColor=\'#f66\'" onmouseout="this.style.color=\'#555\';this.style.borderColor=\'#2a2a2a\'">&times;</button>';
+      sec.appendChild(row);
+    });
+    var addBtn=document.createElement('button');
+    addBtn.textContent='+ Add Item';
+    addBtn.style.cssText='background:none;border:1px dashed #2a2a2a;color:#444;cursor:pointer;padding:5px 14px;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;width:100%;margin-top:0.25rem;transition:all 0.2s';
+    addBtn.onmouseover=function(){addBtn.style.borderColor='#555';addBtn.style.color=r.color;};
+    addBtn.onmouseout=function(){addBtn.style.borderColor='#2a2a2a';addBtn.style.color='#444';};
+    addBtn.onclick=function(){ITEMS[r.id].push({e:'\u2B50',n:'New Item',v:5});buildEditor();};
+    sec.appendChild(addBtn); container.appendChild(sec);
+  });
+}
+function removeItem(rarity,index){if(ITEMS[rarity].length<=1)return;ITEMS[rarity].splice(index,1);buildEditor();}
+
+// PANELS
+function toggleEditor(){
+  var panel=document.getElementById('editorPanel');
+  ['invPanel','adminPanel'].forEach(function(id){document.getElementById(id).classList.remove('open');});
+  document.getElementById('adminBtn').classList.remove('admin-on');
+  panel.classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show',panel.classList.contains('open'));
+}
+function toggleInventory(){
+  var panel=document.getElementById('invPanel');
+  ['editorPanel','adminPanel'].forEach(function(id){document.getElementById(id).classList.remove('open');});
+  document.getElementById('adminBtn').classList.remove('admin-on');
+  panel.classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show',panel.classList.contains('open'));
+  if(panel.classList.contains('open')){renderInventory();if(currentTab==='codex')renderCodex();}
+}
+function closeAllPanels(){
+  ['invPanel','editorPanel','adminPanel'].forEach(function(id){
+    var el=document.getElementById(id); if(el)el.classList.remove('open');
+  });
+  var ab=document.getElementById('adminBtn'); if(ab)ab.classList.remove('admin-on');
+  var ov=document.getElementById('overlay'); if(ov)ov.classList.remove('show');
+}
+
+// TABS
+function switchTab(tab){
+  currentTab=tab;
+  document.getElementById('tabItems').classList.toggle('active',tab==='items');
+  document.getElementById('tabCodex').classList.toggle('active',tab==='codex');
+  document.getElementById('itemsView').style.display=tab==='items'?'':'none';
+  document.getElementById('codexView').style.display=tab==='codex'?'':'none';
+  if(tab==='codex')renderCodex();
+}
+
+// INVENTORY
+function setFilter(f,btn){
+  invFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active'); renderInventory();
+}
+function renderInventory(){
+  var grid=document.getElementById('invGrid'),empty=document.getElementById('invEmpty'),footer=document.getElementById('invFooter');
+  var stats=document.getElementById('invStats'),totalEl=document.getElementById('invTotalVal'),countEl=document.getElementById('invCount');
+  var filtered=invFilter==='all'?inventory:inventory.filter(function(i){return i.rarity===invFilter;});
+  grid.innerHTML='';
+  countEl.textContent='('+inventory.length+')';
+  var totalVal=inventory.reduce(function(s,i){return s+i.v;},0);
+  stats.textContent=inventory.length+' item'+(inventory.length!==1?'s':'')+' \u00B7 $'+totalVal.toFixed(2)+' total';
+  if(filtered.length===0){empty.style.display='block';grid.style.display='none';footer.style.display='none';return;}
+  empty.style.display='none';grid.style.display='grid';footer.style.display='flex';
+  totalEl.textContent='$'+filtered.reduce(function(s,i){return s+i.v;},0).toFixed(2);
+  filtered.forEach(function(item){
+    var rarity=RARITIES.find(function(r){return r.id===item.rarity;});
+    var el=document.createElement('div'); el.className='inv-item';
+    el.innerHTML='<div class="inv-dot" style="background:'+rarity.color+'"></div><div class="inv-emoji">'+item.e+'</div><div class="inv-name">'+item.n+'</div><div class="inv-val">$'+item.v.toFixed(2)+'</div><button class="sell-btn-small" onclick="sellFromInventory('+item._id+')">Sell<span>$'+item.v.toFixed(2)+'</span></button>';
+    grid.appendChild(el);
+  });
+}
+function addToInventory(item,rarityId){
+  inventory.push(Object.assign({},item,{rarity:rarityId,_id:nextId++}));
+  document.getElementById('invCount').textContent='('+inventory.length+')';
+  persistUserData();
+}
+function sellFromInventory(id){
+  var idx=inventory.findIndex(function(i){return i._id===id;}); if(idx===-1)return;
+  var item=inventory.splice(idx,1)[0]; updateBalance(item.v);
+  showToast('Sold '+item.n+' for $'+item.v.toFixed(2)); renderInventory();
+}
+function sellAll(){
+  var filtered=invFilter==='all'?inventory.slice():inventory.filter(function(i){return i.rarity===invFilter;});
+  var total=filtered.reduce(function(s,i){return s+i.v;},0);
+  inventory=invFilter==='all'?[]:inventory.filter(function(i){return i.rarity!==invFilter;});
+  updateBalance(total);
+  showToast('Sold '+filtered.length+' item'+(filtered.length!==1?'s':'')+' for $'+total.toFixed(2));
+  renderInventory();
+}
+function sellAllInventoryQuick(){
+  if(inventory.length===0){showToast('Inventory is empty!');return;}
+  var total=inventory.reduce(function(s,i){return s+i.v;},0),count=inventory.length;
+  inventory=[]; updateBalance(total);
+  document.getElementById('invCount').textContent='(0)';
+  showToast('Sold all '+count+' items for $'+total.toFixed(2)); renderInventory();
+}
+
+// CODEX
+function getTotalItemCount(){return Object.values(ITEMS).reduce(function(s,arr){return s+arr.length;},0);}
+function updateCodexProgress(){
+  var el=document.getElementById('codexProgress');
+  if(el)el.textContent=discoveredItems.size+'/'+getTotalItemCount();
+}
+function renderCodex(){
+  var container=document.getElementById('codexContent'); container.innerHTML='';
+  RARITIES.forEach(function(r){
+    var items=ITEMS[r.id],found=items.filter(function(item){return discoveredItems.has(itemKey(r.id,item.n));}).length;
+    var section=document.createElement('div'); section.className='codex-section';
+    var header=document.createElement('div'); header.className='codex-section-header';
+    header.innerHTML='<span style="color:'+r.color+'">'+r.label+'</span><span class="codex-section-progress">'+found+'/'+items.length+'</span>';
+    section.appendChild(header);
+    var grid=document.createElement('div'); grid.className='codex-grid';
+    items.forEach(function(item){
+      var isFound=discoveredItems.has(itemKey(r.id,item.n));
+      var el=document.createElement('div'); el.className='codex-item'+(isFound?' found':'');
+      el.innerHTML='<div class="codex-emoji">'+item.e+'</div><div class="codex-name">'+item.n+'</div>'+(isFound?'<div class="codex-found-dot" style="background:'+r.color+'"></div>':'');
+      if(isFound){el.style.borderColor=r.color+'44';el.title=item.n+' \u2014 $'+item.v.toFixed(2);}
+      grid.appendChild(el);
+    });
+    section.appendChild(grid); container.appendChild(section);
+  });
+  updateCodexProgress();
+}
+
+// SPIN
+var VISIBLE_COUNT=40;
+function spinClick(){
+  if(currentResult&&!isSpinning){keepItem();startSpin();return;}
+  if(isSpinning){
+    stopTickEngine();
+    var track=document.getElementById('track'); track.style.transition='none';
+    if(spinResolve){clearTimeout(window._spinTimer);spinResolve();spinResolve=null;}
+    return;
+  }
+  startSpin();
+}
+function pickRarity(){
+  var total=RARITIES.reduce(function(s,r){return s+currentWeights[r.id];},0),rand=Math.random()*total;
+  for(var i=0;i<RARITIES.length;i++){if(rand<currentWeights[RARITIES[i].id])return RARITIES[i];rand-=currentWeights[RARITIES[i].id];}
+  return RARITIES[0];
+}
+function pickLegendaryPlus(){
+  var pool=RARITIES.filter(function(r){return r.id==='legendary'||r.id==='mythic';});
+  var total=pool.reduce(function(s,r){return s+currentWeights[r.id];},0),rand=Math.random()*total;
+  for(var i=0;i<pool.length;i++){if(rand<currentWeights[pool[i].id])return pool[i];rand-=currentWeights[pool[i].id];}
+  return pool[0];
+}
+function pickItem(rarityId){var pool=ITEMS[rarityId];return pool[Math.floor(Math.random()*pool.length)];}
+function randomItem(){
+  var all=[];
+  Object.keys(ITEMS).forEach(function(rid){ITEMS[rid].forEach(function(item){all.push(Object.assign({},item,{rarity:rid}));});});
+  return all[Math.floor(Math.random()*all.length)];
+}
+function buildTrack(winRarityId,winItem){
+  var track=document.getElementById('track'); track.innerHTML='';
+  var items=[];
+  for(var i=0;i<VISIBLE_COUNT;i++)items.push(randomItem());
+  items[VISIBLE_COUNT-5]=Object.assign({},winItem,{rarity:winRarityId});
+  items.forEach(function(item){
+    var el=document.createElement('div'); el.className='track-item rarity-'+item.rarity;
+    el.innerHTML='<div class="item-icon">'+item.e+'</div><div class="item-label">'+item.n+'</div>';
+    track.appendChild(el);
+  });
+  return VISIBLE_COUNT-5;
+}
+
+function startSpin(){
+  if(balance<SPIN_COST){showToast('Not enough balance!');return;}
+  if(isSpinning)return;
+  getAudioCtx();
+  isSpinning=true;
+  document.getElementById('spinBtn').classList.add('spinning');
+  updateBalance(-SPIN_COST);
+  if(!guaranteedLegendary)incrementPity();
+  currentResult=null;
+  document.getElementById('result').classList.remove('show');
+  var winRarity=guaranteedLegendary?pickLegendaryPlus():pickRarity();
+  var winItem=pickItem(winRarity.id);
+  if(winRarity.id==='legendary'||winRarity.id==='mythic')resetPity();
+  var spinnerWrap=document.getElementById('spinnerWrap'); spinnerWrap.classList.add('active');
+  var winIndex=buildTrack(winRarity.id,winItem);
+  var containerW=document.querySelector('.track-container').offsetWidth;
+  var centerOffset=containerW/2-ITEM_W/2;
+  var targetX=-(winIndex*ITEM_W)+centerOffset-(Math.random()*40-20);
+  var track=document.getElementById('track');
+  track.style.transition='none'; track.style.transform='translateX(0)';
+  var _wr=winRarity,_wi=winItem;
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
+    track.style.transition='transform 4s cubic-bezier(0.12,0.8,0.25,1)';
+    track.style.transform='translateX('+targetX+'px)';
+    startTickEngine(track,4000);
+  });});
+  var p=new Promise(function(resolve){
+    spinResolve=resolve;
+    window._spinTimer=setTimeout(resolve,4200);
+  });
+  p.then(function(){
+    spinResolve=null; stopTickEngine();
+    track.style.transition='none'; track.style.transform='translateX('+targetX+'px)';
+    setTimeout(function(){
+      spinnerWrap.classList.remove('active');
+      document.getElementById('spinBtn').classList.remove('spinning');
+      isSpinning=false;
+      currentResult={rarity:_wr,item:_wi};
+      var isNew=checkDiscovery(_wr.id,_wi);
+      showResult(_wr,_wi,isNew);
+      persistUserData();
+    },60);
+  });
+}
+function showResult(rarity,item,isNew){
+  var card=document.getElementById('resultCard');
+  card.className='result-card rarity-'+rarity.id;
+  if(rarity.id==='mythic')card.classList.add('mythic-glow');
+  document.getElementById('resultIcon').textContent=item.e;
+  document.getElementById('resultName').textContent=item.n;
+  document.getElementById('resultRarity').textContent=rarity.label;
+  document.getElementById('resultRarity').className='rarity-badge rarity-'+rarity.id;
+  document.getElementById('sellValue').textContent='$'+item.v.toFixed(2);
+  document.getElementById('result').classList.add('show');
+  playWinSound(rarity.id);
+  if(rarity.id==='legendary'||rarity.id==='mythic')spawnParticles(rarity.color);
+  if(isNew)setTimeout(function(){showDiscoveryPopup(rarity.id,item);},600);
+}
+function sellItem(){if(!currentResult)return;updateBalance(currentResult.item.v);showToast('Sold '+currentResult.item.n+' for $'+currentResult.item.v.toFixed(2));resetUI();}
+function keepItem(){if(!currentResult)return;addToInventory(currentResult.item,currentResult.rarity.id);showToast(currentResult.item.n+' added to inventory');resetUI();}
+function resetUI(){document.getElementById('result').classList.remove('show');isSpinning=false;currentResult=null;clearParticles();}
+
+function spawnParticles(color){
+  var container=document.getElementById('particles');
+  for(var i=0;i<30;i++){(function(i){setTimeout(function(){
+    var p=document.createElement('div'); p.className='particle';
+    var size=Math.random()*6+2;
+    p.style.cssText='width:'+size+'px;height:'+size+'px;background:'+color+';left:'+Math.random()*100+'%;animation-duration:'+(Math.random()*3+2)+'s;animation-delay:'+Math.random()+'s;box-shadow:0 0 6px '+color;
+    container.appendChild(p);
+  },i*60);})(i);}
+}
+function clearParticles(){document.getElementById('particles').innerHTML='';}
+
+var toastTimer;
+function showToast(msg){
+  var el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(function(){el.classList.remove('show');},2500);
+}
+
+// ============================================================
+// INIT — runs after all functions defined
+// ============================================================
+var musicStarted=false;
+document.addEventListener('click',function(){if(!musicStarted){musicStarted=true;startMusic();}},{once:true});
+
+// Seed admin, then check for saved session
+ensureAdmin();
+(function(){
+  var sess=getSession();
+  if(sess&&getUserData(sess)){
+    enterGame(sess);
+  }
+})();
+
+// ============================================================
+// SOCIAL SYSTEM
+// ============================================================
+// Data model in each account:
+//   friends: [username, ...]
+//   friendRequests: { incoming: [username,...], outgoing: [username,...] }
+//   trades: [{ id, from, to, offer:[{e,n,v,rarity,_origId}], request:[...], status:'pending'|'accepted'|'declined', ts }]
+
+var SOCIAL_KEY = 'loot_social_v1'; // separate key for social data so it doesn't bloat account saves
+
+function loadSocialData() {
+  try { return JSON.parse(localStorage.getItem(SOCIAL_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveSocialData(d) {
+  try { localStorage.setItem(SOCIAL_KEY, JSON.stringify(d)); } catch(e) {}
+}
+function getUserSocial(u) {
+  var d = loadSocialData();
+  if (!d[u]) d[u] = { friends:[], friendRequests:{incoming:[],outgoing:[]}, trades:[] };
+  return d[u];
+}
+function saveUserSocial(u, social) {
+  var d = loadSocialData(); d[u] = social; saveSocialData(d);
+}
+
+// ── Social panel toggle ──
+var socialTabActive = 'search';
+function toggleSocial() {
+  var panel = document.getElementById('socialPanel');
+  var btn   = document.getElementById('socialBtn');
+  // close other panels
+  ['editorPanel','adminPanel','invPanel'].forEach(function(id){
+    var el=document.getElementById(id); if(el)el.classList.remove('open');
+  });
+  var ab=document.getElementById('adminBtn'); if(ab)ab.classList.remove('admin-on');
+  panel.classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show', panel.classList.contains('open'));
+  if (panel.classList.contains('open')) { refreshSocialPanel(); }
+}
+function switchSocialTab(tab) {
+  socialTabActive = tab;
+  ['search','friends','requests','trades'].forEach(function(t) {
+    document.getElementById('stab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('social-'+t+'-view').style.display = t===tab ? 'flex' : 'none';
+  });
+  if (tab === 'friends')  renderFriends();
+  if (tab === 'requests') renderRequests();
+  if (tab === 'trades')   renderTrades();
+}
+
+function refreshSocialPanel() {
+  updateSocialCounts();
+  if (socialTabActive === 'friends')  renderFriends();
+  if (socialTabActive === 'requests') renderRequests();
+  if (socialTabActive === 'trades')   renderTrades();
+}
+
+function updateSocialCounts() {
+  if (!currentUser) return;
+  var social = getUserSocial(currentUser);
+  var friends = social.friends.length;
+  var incoming = social.friendRequests.incoming.length;
+  var incomingTrades = social.trades.filter(function(t){return t.to===currentUser&&t.status==='pending';}).length;
+  var totalNotif = incoming + incomingTrades;
+  document.getElementById('friendsCount').textContent  = friends > 0 ? '('+friends+')' : '';
+  document.getElementById('requestsCount').textContent = incoming > 0 ? '('+incoming+')' : '';
+  document.getElementById('tradesCount').textContent   = incomingTrades > 0 ? '('+incomingTrades+')' : '';
+  var dot = document.getElementById('socialNotifDot');
+  var topDot = document.getElementById('topBarNotif');
+  if (dot)    dot.style.display    = totalNotif > 0 ? 'inline-block' : 'none';
+  if (topDot) topDot.style.display = totalNotif > 0 ? 'block' : 'none';
+}
+
+// ── Search ──
+function searchUser() {
+  var input = document.getElementById('userSearchInput');
+  var q = input.value.trim().toLowerCase();
+  var res = document.getElementById('searchResult');
+  res.innerHTML = '';
+  if (!q) return;
+  if (q === currentUser) { res.innerHTML = '<div class="social-empty">That\'s you!</div>'; return; }
+  var accounts = loadAccounts();
+  if (!accounts[q]) { res.innerHTML = '<div class="social-empty">User "'+q+'" not found.</div>'; return; }
+  res.appendChild(buildUserCard(q, true));
+}
+
+function buildUserCard(username, showViewBtn) {
+  var social = getUserSocial(currentUser);
+  var isFriend = social.friends.indexOf(username) !== -1;
+  var outgoing = social.friendRequests.outgoing.indexOf(username) !== -1;
+  var incoming = social.friendRequests.incoming.indexOf(username) !== -1;
+  var userData = getUserData(username);
+  var invCount = userData && userData.inventory ? userData.inventory.length : 0;
+
+  var div = document.createElement('div');
+  div.className = 'user-card';
+
+  var avatarLetter = username.charAt(0).toUpperCase();
+  var actionsHTML = '';
+
+  if (isFriend) {
+    actionsHTML += '<span class="friend-status status-friends">&#10003; Friends</span>';
+    actionsHTML += '<button class="mini-btn trade-btn" onclick="openTradeCompose(\''+username+'\');event.stopPropagation()">Trade</button>';
+    actionsHTML += '<button class="mini-btn danger" onclick="removeFriend(\''+username+'\');event.stopPropagation()">Remove</button>';
+  } else if (incoming) {
+    actionsHTML += '<button class="mini-btn accept" onclick="acceptFriendRequest(\''+username+'\');event.stopPropagation()">Accept</button>';
+    actionsHTML += '<button class="mini-btn danger" onclick="declineFriendRequest(\''+username+'\');event.stopPropagation()">Decline</button>';
+  } else if (outgoing) {
+    actionsHTML += '<span class="friend-status status-pending">Request Sent</span>';
+    actionsHTML += '<button class="mini-btn danger" onclick="cancelFriendRequest(\''+username+'\');event.stopPropagation()">Cancel</button>';
+  } else {
+    actionsHTML += '<button class="mini-btn" onclick="sendFriendRequest(\''+username+'\');event.stopPropagation()">Add Friend</button>';
+  }
+  if (showViewBtn !== false) {
+    actionsHTML += '<button class="mini-btn" onclick="openProfile(\''+username+'\');event.stopPropagation()">Profile</button>';
+  }
+
+  div.innerHTML =
+    '<div class="user-card-avatar">'+avatarLetter+'</div>' +
+    '<div class="user-card-info">' +
+      '<div class="user-card-name">'+username+'</div>' +
+      '<div class="user-card-sub">'+invCount+' item'+(invCount!==1?'s':'')+' in inventory</div>' +
+    '</div>' +
+    '<div class="user-card-actions">'+actionsHTML+'</div>';
+
+  div.addEventListener('click', function() { openProfile(username); });
+  return div;
+}
+
+// ── Friend requests ──
+function sendFriendRequest(to) {
+  var mySocial = getUserSocial(currentUser);
+  var theirSocial = getUserSocial(to);
+  if (mySocial.friends.indexOf(to) !== -1) { showToast('Already friends!'); return; }
+  if (mySocial.friendRequests.outgoing.indexOf(to) !== -1) { showToast('Request already sent'); return; }
+  if (mySocial.friendRequests.incoming.indexOf(to) !== -1) {
+    // They already sent us one - auto accept
+    acceptFriendRequest(to); return;
+  }
+  mySocial.friendRequests.outgoing.push(to);
+  theirSocial.friendRequests.incoming.push(currentUser);
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(to, theirSocial);
+  showToast('Friend request sent to '+to);
+  refreshSocialPanel();
+  // re-render search result
+  var q = document.getElementById('userSearchInput').value.trim().toLowerCase();
+  if (q === to) { var res=document.getElementById('searchResult'); res.innerHTML=''; res.appendChild(buildUserCard(to,true)); }
+}
+
+function acceptFriendRequest(from) {
+  var mySocial   = getUserSocial(currentUser);
+  var theirSocial= getUserSocial(from);
+  // Remove from request lists
+  mySocial.friendRequests.incoming   = mySocial.friendRequests.incoming.filter(function(u){return u!==from;});
+  theirSocial.friendRequests.outgoing= theirSocial.friendRequests.outgoing.filter(function(u){return u!==currentUser;});
+  // Add as friends both ways
+  if (mySocial.friends.indexOf(from) === -1) mySocial.friends.push(from);
+  if (theirSocial.friends.indexOf(currentUser) === -1) theirSocial.friends.push(currentUser);
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(from, theirSocial);
+  showToast('Now friends with '+from+'!');
+  refreshSocialPanel();
+}
+
+function declineFriendRequest(from) {
+  var mySocial   = getUserSocial(currentUser);
+  var theirSocial= getUserSocial(from);
+  mySocial.friendRequests.incoming    = mySocial.friendRequests.incoming.filter(function(u){return u!==from;});
+  theirSocial.friendRequests.outgoing = theirSocial.friendRequests.outgoing.filter(function(u){return u!==currentUser;});
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(from, theirSocial);
+  showToast('Request declined');
+  refreshSocialPanel();
+}
+
+function cancelFriendRequest(to) {
+  var mySocial   = getUserSocial(currentUser);
+  var theirSocial= getUserSocial(to);
+  mySocial.friendRequests.outgoing   = mySocial.friendRequests.outgoing.filter(function(u){return u!==to;});
+  theirSocial.friendRequests.incoming= theirSocial.friendRequests.incoming.filter(function(u){return u!==currentUser;});
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(to, theirSocial);
+  showToast('Request cancelled');
+  refreshSocialPanel();
+}
+
+function removeFriend(username) {
+  var mySocial   = getUserSocial(currentUser);
+  var theirSocial= getUserSocial(username);
+  mySocial.friends   = mySocial.friends.filter(function(u){return u!==username;});
+  theirSocial.friends= theirSocial.friends.filter(function(u){return u!==currentUser;});
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(username, theirSocial);
+  showToast('Removed '+username+' from friends');
+  refreshSocialPanel();
+}
+
+// ── Render friend lists ──
+function renderFriends() {
+  var container = document.getElementById('friendsList'); container.innerHTML = '';
+  var social = getUserSocial(currentUser);
+  if (social.friends.length === 0) { container.innerHTML = '<div class="social-empty">No friends yet. Search for users to add them!</div>'; return; }
+  social.friends.forEach(function(username) { container.appendChild(buildUserCard(username, true)); });
+}
+
+function renderRequests() {
+  var inEl  = document.getElementById('incomingRequests');
+  var outEl = document.getElementById('outgoingRequests');
+  inEl.innerHTML = ''; outEl.innerHTML = '';
+  var social = getUserSocial(currentUser);
+  if (social.friendRequests.incoming.length === 0) inEl.innerHTML = '<div class="social-empty">No incoming requests.</div>';
+  else social.friendRequests.incoming.forEach(function(u) { inEl.appendChild(buildUserCard(u, true)); });
+  if (social.friendRequests.outgoing.length === 0) outEl.innerHTML = '<div class="social-empty">No sent requests.</div>';
+  else social.friendRequests.outgoing.forEach(function(u) { outEl.appendChild(buildUserCard(u, true)); });
+}
+
+// ── Profile Modal ──
+var profileTarget = null;
+function openProfile(username) {
+  profileTarget = username;
+  var userData = getUserData(username);
+  if (!userData) { showToast('User not found'); return; }
+  var social = getUserSocial(currentUser);
+  var isFriend = social.friends.indexOf(username) !== -1;
+  var outgoing = social.friendRequests.outgoing.indexOf(username) !== -1;
+  var incoming = social.friendRequests.incoming.indexOf(username) !== -1;
+
+  document.getElementById('profileAvatar').textContent = username.charAt(0).toUpperCase();
+  document.getElementById('profileUsername').textContent = username;
+  var inv = userData.inventory || [];
+  var totalVal = inv.reduce(function(s,i){return s+(i.v||0);},0);
+  document.getElementById('profileStats').innerHTML =
+    inv.length+' items in inventory<br>$'+totalVal.toFixed(2)+' inventory value';
+  document.getElementById('profileInvLabel').textContent = '('+inv.length+')';
+
+  // Actions
+  var actEl = document.getElementById('profileActions');
+  actEl.innerHTML = '';
+  if (username !== currentUser) {
+    if (isFriend) {
+      var tradeBtn = document.createElement('button'); tradeBtn.className='social-action-btn';
+      tradeBtn.textContent='&#8644; Send Trade'; tradeBtn.onclick=function(){closeProfile();openTradeCompose(username);};
+      actEl.appendChild(tradeBtn);
+      var rmBtn = document.createElement('button'); rmBtn.className='social-action-btn danger';
+      rmBtn.textContent='Remove Friend'; rmBtn.onclick=function(){removeFriend(username);closeProfile();};
+      actEl.appendChild(rmBtn);
+    } else if (incoming) {
+      var accBtn=document.createElement('button'); accBtn.className='social-action-btn accept';
+      accBtn.textContent='Accept Request'; accBtn.onclick=function(){acceptFriendRequest(username);closeProfile();};
+      actEl.appendChild(accBtn);
+    } else if (outgoing) {
+      var canBtn=document.createElement('button'); canBtn.className='social-action-btn danger';
+      canBtn.textContent='Cancel Request'; canBtn.onclick=function(){cancelFriendRequest(username);closeProfile();};
+      actEl.appendChild(canBtn);
+    } else {
+      var addBtn=document.createElement('button'); addBtn.className='social-action-btn';
+      addBtn.textContent='+ Add Friend'; addBtn.onclick=function(){sendFriendRequest(username);closeProfile();};
+      actEl.appendChild(addBtn);
+    }
+  }
+
+  // Their inventory
+  var grid = document.getElementById('profileInvGrid'); grid.innerHTML = '';
+  if (inv.length === 0) { grid.innerHTML = '<div style="opacity:0.2;font-size:0.65rem;padding:1rem;letter-spacing:0.08em">Empty inventory</div>'; }
+  else {
+    inv.forEach(function(item, idx) {
+      var rarity = RARITIES.find(function(r){return r.id===item.rarity;}) || {color:'#555'};
+      var el = document.createElement('div'); el.className='profile-inv-item';
+      el.style.borderColor = rarity.color+'44';
+      el.innerHTML='<div class="profile-inv-emoji">'+item.e+'</div><div class="profile-inv-name">'+item.n+'</div><div class="profile-inv-val">$'+(item.v||0).toFixed(2)+'</div>';
+      el.title = item.n+' ('+item.rarity+') — $'+(item.v||0).toFixed(2);
+      grid.appendChild(el);
+    });
+  }
+
+  document.getElementById('profileOverlay').classList.add('show');
+  document.getElementById('profileModal').classList.add('show');
+}
+
+function closeProfile() {
+  document.getElementById('profileOverlay').classList.remove('show');
+  document.getElementById('profileModal').classList.remove('show');
+  profileTarget = null;
+}
+
+// ── Trade Compose ──
+var tradeTarget = null;
+var tradeMyOffer = [];   // items from my inventory: {e,n,v,rarity,_origId}
+var tradeTheirRequest = []; // items from their inventory: {e,n,v,rarity,_origId}
+
+function openTradeCompose(username) {
+  tradeTarget = username;
+  tradeMyOffer = [];
+  tradeTheirRequest = [];
+  document.getElementById('tradeToLabel').textContent = 'To: ' + username;
+
+  renderTradeCompose();
+
+  document.getElementById('tradeOverlay').classList.add('show');
+  document.getElementById('tradeModal').classList.add('show');
+}
+
+function closeTrade() {
+  document.getElementById('tradeOverlay').classList.remove('show');
+  document.getElementById('tradeModal').classList.remove('show');
+  tradeTarget = null; tradeMyOffer = []; tradeTheirRequest = [];
+}
+
+function renderTradeCompose() {
+  // My offer grid
+  var myGrid = document.getElementById('myOfferGrid'); myGrid.innerHTML = '';
+  tradeMyOffer.forEach(function(item, idx) {
+    var el = document.createElement('div'); el.className = 'trade-offer-item';
+    el.title = 'Click to remove: '+item.n;
+    el.innerHTML = item.e;
+    el.onclick = function() { tradeMyOffer.splice(idx,1); renderTradeCompose(); };
+    myGrid.appendChild(el);
+  });
+
+  // Their request grid
+  var thGrid = document.getElementById('theirOfferGrid'); thGrid.innerHTML = '';
+  tradeTheirRequest.forEach(function(item, idx) {
+    var el = document.createElement('div'); el.className = 'trade-offer-item';
+    el.title = 'Click to remove: '+item.n;
+    el.innerHTML = item.e;
+    el.onclick = function() { tradeTheirRequest.splice(idx,1); renderTradeCompose(); };
+    thGrid.appendChild(el);
+  });
+
+  // My inventory picker
+  var myInvEl = document.getElementById('tradeMyInv'); myInvEl.innerHTML = '';
+  var myOfferedIds = tradeMyOffer.map(function(i){return i._origId;});
+  inventory.forEach(function(item) {
+    var el = document.createElement('div');
+    el.className = 'trade-inv-mini' + (myOfferedIds.indexOf(item._id)!==-1?' in-offer':'');
+    el.innerHTML = item.e + '<div class="trade-inv-mini-name">'+item.n+'</div>';
+    el.title = item.n+' — $'+item.v.toFixed(2);
+    el.onclick = function() {
+      if (myOfferedIds.indexOf(item._id)!==-1) return;
+      tradeMyOffer.push({e:item.e,n:item.n,v:item.v,rarity:item.rarity,_origId:item._id});
+      renderTradeCompose();
+    };
+    myInvEl.appendChild(el);
+  });
+  if (inventory.length === 0) myInvEl.innerHTML = '<div style="opacity:0.2;font-size:0.6rem;padding:0.5rem">No items</div>';
+
+  // Their inventory picker
+  var theirInvEl = document.getElementById('tradeTheirInv'); theirInvEl.innerHTML = '';
+  var theirData = getUserData(tradeTarget);
+  var theirInv = (theirData && theirData.inventory) ? theirData.inventory : [];
+  var theirRequestedIds = tradeTheirRequest.map(function(i){return i._origId;});
+  theirInv.forEach(function(item, idx) {
+    var el = document.createElement('div');
+    el.className = 'trade-inv-mini' + (theirRequestedIds.indexOf(idx)!==-1?' in-offer':'');
+    el.innerHTML = item.e + '<div class="trade-inv-mini-name">'+item.n+'</div>';
+    el.title = item.n+' — $'+(item.v||0).toFixed(2);
+    el.onclick = function() {
+      if (theirRequestedIds.indexOf(idx)!==-1) return;
+      tradeTheirRequest.push({e:item.e,n:item.n,v:item.v,rarity:item.rarity,_origId:idx});
+      renderTradeCompose();
+    };
+    theirInvEl.appendChild(el);
+  });
+  if (theirInv.length === 0) theirInvEl.innerHTML = '<div style="opacity:0.2;font-size:0.6rem;padding:0.5rem">Empty inventory</div>';
+
+  // Values
+  var myVal = tradeMyOffer.reduce(function(s,i){return s+(i.v||0);},0);
+  var thVal = tradeTheirRequest.reduce(function(s,i){return s+(i.v||0);},0);
+  document.getElementById('myOfferValue').textContent = '$'+myVal.toFixed(2);
+  document.getElementById('theirOfferValue').textContent = '$'+thVal.toFixed(2);
+}
+
+function sendTrade() {
+  if (!tradeTarget) return;
+  if (tradeMyOffer.length === 0 && tradeTheirRequest.length === 0) { showToast('Add items to the trade first!'); return; }
+
+  // Check I still own all offered items
+  var myOfferedIds = tradeMyOffer.map(function(i){return i._origId;});
+  for (var i=0; i<myOfferedIds.length; i++) {
+    if (!inventory.find(function(it){return it._id===myOfferedIds[i];})) {
+      showToast('You no longer have one of those items!'); return;
+    }
+  }
+
+  var tradeId = 'trade_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);
+  var tradeObj = {
+    id: tradeId,
+    from: currentUser,
+    to: tradeTarget,
+    offer: tradeMyOffer.slice(),
+    request: tradeTheirRequest.slice(),
+    status: 'pending',
+    ts: Date.now()
+  };
+
+  // Save to both users' social trade list
+  var mySocial    = getUserSocial(currentUser);
+  var theirSocial = getUserSocial(tradeTarget);
+  mySocial.trades.push(tradeObj);
+  theirSocial.trades.push(tradeObj);
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(tradeTarget, theirSocial);
+
+  showToast('Trade sent to '+tradeTarget+'!');
+  closeTrade();
+  updateSocialCounts();
+}
+
+// ── Render Trades ──
+function renderTrades() {
+  var inEl  = document.getElementById('incomingTrades');
+  var outEl = document.getElementById('outgoingTrades');
+  inEl.innerHTML = ''; outEl.innerHTML = '';
+  var social = getUserSocial(currentUser);
+  var incoming = social.trades.filter(function(t){return t.to===currentUser&&t.status==='pending';});
+  var outgoing = social.trades.filter(function(t){return t.from===currentUser&&t.status==='pending';});
+
+  if (incoming.length === 0) inEl.innerHTML = '<div class="social-empty">No incoming trades.</div>';
+  else incoming.forEach(function(trade) { inEl.appendChild(buildTradeCard(trade, true)); });
+
+  if (outgoing.length === 0) outEl.innerHTML = '<div class="social-empty">No outgoing trades.</div>';
+  else outgoing.forEach(function(trade) { outEl.appendChild(buildTradeCard(trade, false)); });
+}
+
+function buildTradeCard(trade, isIncoming) {
+  var div = document.createElement('div'); div.className = 'trade-card';
+  var other = isIncoming ? trade.from : trade.to;
+  var ts = new Date(trade.ts);
+  var timeStr = ts.toLocaleDateString()+' '+ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+  var offerEmojis = trade.offer.slice(0,5).map(function(i){return '<div class="trade-mini-item" title="'+i.n+'">'+i.e+'</div>';}).join('');
+  var requestEmojis = trade.request.slice(0,5).map(function(i){return '<div class="trade-mini-item" title="'+i.n+'">'+i.e+'</div>';}).join('');
+  var offerVal = trade.offer.reduce(function(s,i){return s+(i.v||0);},0);
+  var reqVal   = trade.request.reduce(function(s,i){return s+(i.v||0);},0);
+
+  var actionsHTML = '';
+  if (isIncoming) {
+    actionsHTML = '<button class="mini-btn accept" onclick="acceptTrade(\''+trade.id+'\')">Accept</button><button class="mini-btn danger" onclick="declineTrade(\''+trade.id+'\')">Decline</button>';
+  } else {
+    actionsHTML = '<button class="mini-btn danger" onclick="cancelTrade(\''+trade.id+'\')">Cancel</button>';
+  }
+
+  div.innerHTML =
+    '<div class="trade-card-header">'+
+      '<div class="trade-card-from">'+(isIncoming?'From: ':'To: ')+'<strong>'+other+'</strong> <span>'+timeStr+'</span></div>'+
+    '</div>'+
+    '<div class="trade-card-items">'+
+      '<div class="trade-card-side">'+offerEmojis+'</div>'+
+      '<div class="trade-card-arrow">'+(isIncoming?'&#8594;':'&#8594;')+'</div>'+
+      '<div class="trade-card-side">'+requestEmojis+'</div>'+
+    '</div>'+
+    '<div style="font-size:0.55rem;opacity:0.35;letter-spacing:0.06em">'+
+      (isIncoming ? 'They offer $'+offerVal.toFixed(2)+' &middot; Want $'+reqVal.toFixed(2) : 'You offer $'+offerVal.toFixed(2)+' &middot; Want $'+reqVal.toFixed(2))+
+    '</div>'+
+    '<div class="trade-card-actions">'+actionsHTML+'</div>';
+  return div;
+}
+
+function acceptTrade(tradeId) {
+  var mySocial = getUserSocial(currentUser);
+  var trade = mySocial.trades.find(function(t){return t.id===tradeId;});
+  if (!trade || trade.status !== 'pending') { showToast('Trade no longer available'); renderTrades(); return; }
+
+  // Verify sender still has offered items
+  var senderData = getUserData(trade.from);
+  if (!senderData) { showToast('Sender account not found'); return; }
+  var senderInv = senderData.inventory || [];
+  for (var i=0; i<trade.offer.length; i++) {
+    var needed = trade.offer[i];
+    // Find by name+rarity since _origId may shift
+    var found = senderInv.find(function(it){return it.n===needed.n&&it.rarity===needed.rarity;});
+    if (!found) { showToast(trade.from+' no longer has: '+needed.n); return; }
+  }
+
+  // Verify receiver (me) still has requested items
+  for (var j=0; j<trade.request.length; j++) {
+    var req = trade.request[j];
+    var myItem = inventory.find(function(it){return it.n===req.n&&it.rarity===req.rarity;});
+    if (!myItem) { showToast('You no longer have: '+req.n); return; }
+  }
+
+  // Execute the swap
+  // Remove offered items from sender
+  var newSenderInv = senderInv.slice();
+  trade.offer.forEach(function(needed) {
+    var idx = newSenderInv.findIndex(function(it){return it.n===needed.n&&it.rarity===needed.rarity;});
+    if (idx !== -1) newSenderInv.splice(idx, 1);
+  });
+  // Add requested items to sender from me
+  trade.request.forEach(function(req) {
+    var myIdx = inventory.findIndex(function(it){return it.n===req.n&&it.rarity===req.rarity;});
+    if (myIdx !== -1) {
+      var taken = inventory.splice(myIdx,1)[0];
+      newSenderInv.push({e:taken.e,n:taken.n,v:taken.v,rarity:taken.rarity});
+    }
+  });
+  // Add offered items to me
+  trade.offer.forEach(function(item) {
+    inventory.push({e:item.e,n:item.n,v:item.v,rarity:item.rarity,_id:nextId++});
+  });
+
+  // Save both parties
+  saveUserData(trade.from, { inventory: newSenderInv });
+  persistUserData();
+
+  // Mark trade as accepted in both social records
+  var theirSocial = getUserSocial(trade.from);
+  function markAccepted(trades) {
+    var t = trades.find(function(t){return t.id===tradeId;});
+    if (t) t.status = 'accepted';
+  }
+  markAccepted(mySocial.trades);
+  markAccepted(theirSocial.trades);
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(trade.from, theirSocial);
+
+  document.getElementById('invCount').textContent = '('+inventory.length+')';
+  showToast('Trade accepted! Items exchanged.');
+  renderTrades(); updateSocialCounts();
+}
+
+function declineTrade(tradeId) {
+  updateTradeStatus(tradeId, 'declined');
+  showToast('Trade declined');
+  renderTrades(); updateSocialCounts();
+}
+
+function cancelTrade(tradeId) {
+  updateTradeStatus(tradeId, 'cancelled');
+  showToast('Trade cancelled');
+  renderTrades(); updateSocialCounts();
+}
+
+function updateTradeStatus(tradeId, status) {
+  var mySocial = getUserSocial(currentUser);
+  var trade = mySocial.trades.find(function(t){return t.id===tradeId;});
+  if (!trade) return;
+  var other = trade.from === currentUser ? trade.to : trade.from;
+  var theirSocial = getUserSocial(other);
+  function mark(trades) { var t=trades.find(function(t){return t.id===tradeId;}); if(t)t.status=status; }
+  mark(mySocial.trades); mark(theirSocial.trades);
+  saveUserSocial(currentUser, mySocial);
+  saveUserSocial(other, theirSocial);
+}
+
+// Patch closeAllPanels to also close social
+var _origCloseAllPanels = closeAllPanels;
+closeAllPanels = function() {
+  _origCloseAllPanels();
+  var sp = document.getElementById('socialPanel');
+  if (sp) sp.classList.remove('open');
+  var sb = document.getElementById('socialBtn');
+  if (sb) sb.classList.remove('active-btn');
+};
+
+// Patch enterGame to refresh social counts
+var _origEnterGame = enterGame;
+enterGame = function(username) {
+  _origEnterGame(username);
+  setTimeout(updateSocialCounts, 100);
+};
+</script>
+</body>
+</html>
